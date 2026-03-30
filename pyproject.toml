@@ -2,8 +2,26 @@
 name = "symbiont"
 version = "0.1.0"
 description = "Symbiotic Multi-pattern Bio-intelligent Organism for Networked Tasks"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
+authors = [
+    {name = "Renato Aparecido Gomes", email = "renatoapgomes@gmail.com"},
+]
+keywords = ["swarm-intelligence", "multi-agent", "bio-inspired", "llm-agents", "coordination"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/RAG7782/symbiont"
+Paper = "https://doi.org/10.5281/zenodo.19325749"
+Repository = "https://github.com/RAG7782/symbiont"
 
 [project.optional-dependencies]
 llm = ["anthropic>=0.42.0"]

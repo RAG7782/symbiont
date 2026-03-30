@@ -13,3 +13,7 @@ venv/
 .mypy_cache/
 .ruff_cache/
 *.log
+.claude/
+.mcp.json
+HANDOFF-*.md
+.DS_Store
