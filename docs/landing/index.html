@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYMBIONT — Inteligencia Artificial Multi-Agente Bio-Inspirada</title>
+<meta name="description" content="Framework de IA que coordena 9 agentes com 8 sistemas biologicos. Roda local, zero custo mensal, open source.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0a; --bg2: #111; --green: #00ff88; --green2: #00cc66;
+    --text: #e0e0e0; --muted: #666; --border: #1a3a2a;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  a { color: var(--green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 80px 0; }
+  h1 { font-size: 3em; color: var(--green); font-weight: 800; letter-spacing: -1px; }
+  h2 { font-size: 2em; color: var(--green2); margin-bottom: 16px; }
+  h3 { font-size: 1.2em; color: var(--green); margin-bottom: 8px; }
+  .subtitle { font-size: 1.3em; color: var(--muted); margin: 16px 0 32px; max-width: 700px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; margin: 4px; }
+  .badge-green { background: #003d1a; color: var(--green); }
+  .badge-blue { background: #001a3d; color: #4488ff; }
+
+  /* Hero */
+  .hero { padding: 120px 0 80px; text-align: center; }
+  .hero h1 { font-size: 3.5em; margin-bottom: 0; }
+  .hero .subtitle { margin: 16px auto 40px; }
+  .cta { display: inline-block; padding: 16px 40px; background: var(--green); color: #000; font-weight: 700; font-size: 1.1em; border-radius: 8px; transition: all 0.2s; }
+  .cta:hover { background: var(--green2); text-decoration: none; transform: translateY(-2px); }
+  .cta-secondary { background: transparent; border: 2px solid var(--green); color: var(--green); margin-left: 16px; }
+  .cta-secondary:hover { background: #001a0d; }
+
+  /* Stats */
+  .stats { display: flex; justify-content: center; gap: 48px; margin: 48px 0; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat .val { font-size: 2.5em; color: var(--green); font-weight: 800; }
+  .stat .label { font-size: 0.9em; color: var(--muted); }
+
+  /* Grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 32px; }
+  .card:hover { border-color: var(--green); }
+  .card .icon { font-size: 2em; margin-bottom: 12px; }
+
+  /* Pricing */
+  .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+  .price-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 40px 32px; text-align: center; }
+  .price-card.featured { border-color: var(--green); position: relative; }
+  .price-card.featured::before { content: "POPULAR"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--green); color: #000; padding: 4px 16px; border-radius: 12px; font-size: 0.75em; font-weight: 700; }
+  .price { font-size: 3em; color: var(--green); font-weight: 800; }
+  .price span { font-size: 0.4em; color: var(--muted); }
+  .price-features { text-align: left; margin: 24px 0; list-style: none; }
+  .price-features li { padding: 8px 0; border-bottom: 1px solid #1a1a1a; }
+  .price-features li::before { content: "\2713 "; color: var(--green); font-weight: bold; }
+
+  /* Comparison */
+  table { width: 100%; border-collapse: collapse; margin: 24px 0; }
+  th { text-align: left; color: var(--green); padding: 12px; border-bottom: 2px solid var(--border); }
+  td { padding: 12px; border-bottom: 1px solid #1a1a1a; }
+  tr:hover td { background: #0d1a0d; }
+
+  /* Footer */
+  footer { padding: 40px 0; border-top: 1px solid var(--border); text-align: center; color: var(--muted); font-size: 0.9em; }
+
+  /* Code block */
+  pre { background: #0d0d0d; border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-x: auto; font-family: 'SF Mono', monospace; font-size: 0.9em; margin: 16px 0; }
+
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 2.2em; }
+    .stats { gap: 24px; }
+    .cta-secondary { margin-left: 0; margin-top: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+<div class="container">
+  <div>
+    <span class="badge badge-green">Open Source</span>
+    <span class="badge badge-green">Apache 2.0</span>
+    <span class="badge badge-blue">ANTS 2026</span>
+  </div>
+  <h1>SYMBIONT</h1>
+  <p class="subtitle">9 agentes de IA que se auto-organizam como um organismo biologico. 8 sistemas de inteligencia de enxame. Zero custo mensal.</p>
+  <a href="https://github.com/RAG7782/symbiont" class="cta">Ver no GitHub</a>
+  <a href="#pricing" class="cta cta-secondary">Planos</a>
+
+  <div class="stats">
+    <div class="stat"><div class="val">8</div><div class="label">Sistemas Biologicos</div></div>
+    <div class="stat"><div class="val">9</div><div class="label">Agentes Autonomos</div></div>
+    <div class="stat"><div class="val">$0</div><div class="label">Custo Mensal</div></div>
+    <div class="stat"><div class="val">6.4K</div><div class="label">Linhas de Codigo</div></div>
+  </div>
+</div>
+</section>
+
+<!-- Bio Systems -->
+<section style="background: var(--bg2);">
+<div class="container">
+  <h2>8 Sistemas Biologicos Reais</h2>
+  <p class="subtitle">Cada sistema resolve um problema diferente de coordenacao entre agentes.</p>
+  <div class="grid">
+    <div class="card"><div class="icon">🍄</div><h3>Mycelium</h3><p>Fungos micorrizicos. Canais de comunicacao que engrossam com uso e atrofiam com desuso.</p></div>
+    <div class="card"><div class="icon">🟡</div><h3>Topology Engine</h3><p>Slime mold (Physarum). Auto-otimiza a rede: explora, reforça e poda caminhos.</p></div>
+    <div class="card"><div class="icon">🐜</div><h3>Castas</h3><p>Formigas cortadeiras (Atta). 5 castas de agentes mapeadas a modelos de IA por custo.</p></div>
+    <div class="card"><div class="icon">🐝</div><h3>Waggle Protocol</h3><p>Abelhas (Apis). Decisoes coletivas com quorum dinamico baseado em risco.</p></div>
+    <div class="card"><div class="icon">🏗</div><h3>Mound</h3><p>Cupins (Macrotermes). Artefatos compartilhados + homeostase termica do sistema.</p></div>
+    <div class="card"><div class="icon">🐦</div><h3>Murmuration</h3><p>Estorninhos (Sturnus). Reflexos de emergencia em O(log N) — sem deliberacao.</p></div>
+    <div class="card"><div class="icon">🐺</div><h3>Governor</h3><p>Lobo + Rato-toupeira. Lideranca contextual que muda conforme a fase da tarefa.</p></div>
+    <div class="card"><div class="icon">🐬</div><h3>Pod Dynamics</h3><p>Golfinhos (Tursiops). Coalizoes efemeras que se formam e dissolvem sob demanda.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- How it works -->
+<section>
+<div class="container">
+  <h2>Como Funciona</h2>
+  <pre><code>$ sym "Analise a legalidade da clausula de nao-concorrencia neste contrato"
+
+🧬 SYMBIONT booting (ollama/full)...
+   9 agents online
+
+📋 Task: Analise a legalidade da clausula de nao-concorrencia...
+
+🐝 Decisao coletiva: Analisar sob CLT + jurisprudencia TST
+   Scouts consultados: 4
+
+📦 Artefato: parecer-nao-concorrencia-2026
+
+🔄 Fases: EXPLORATION → DECISION → EXECUTION → VALIDATION → DELIVERY
+
+🧬 SYMBIONT shutdown.</code></pre>
+  <p>5 fases autonomas. Nenhum agente sabe o plano global. A coordenacao emerge das interacoes locais.</p>
+</div>
+</section>
+
+<!-- Comparison -->
+<section style="background: var(--bg2);">
+<div class="container">
+  <h2>SYMBIONT vs Alternativas</h2>
+  <table>
+    <thead><tr><th></th><th>ChatGPT/Claude</th><th>AutoGPT/CrewAI</th><th>SYMBIONT</th></tr></thead>
+    <tbody>
+      <tr><td>Agentes</td><td>1</td><td>N (sequencial)</td><td><strong>9 (emergente)</strong></td></tr>
+      <tr><td>Coordenacao</td><td>Chat</td><td>Pipeline</td><td><strong>8 sistemas bio</strong></td></tr>
+      <tr><td>Custo mensal</td><td>$20-200</td><td>$50-500</td><td><strong>$0</strong></td></tr>
+      <tr><td>Privacidade</td><td>Cloud</td><td>Cloud</td><td><strong>100% local</strong></td></tr>
+      <tr><td>Decisao coletiva</td><td>Nao</td><td>Nao</td><td><strong>Quorum dinamico</strong></td></tr>
+      <tr><td>Fine-tune</td><td>Impossivel</td><td>Impossivel</td><td><strong>Pipeline integrado</strong></td></tr>
+      <tr><td>Distribuido</td><td>Nao</td><td>Nao</td><td><strong>Colonias via SSH</strong></td></tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing">
+<div class="container">
+  <h2>Planos</h2>
+  <p class="subtitle">Open source para sempre. Servicos para quem quer acelerar.</p>
+  <div class="pricing">
+    <div class="price-card">
+      <h3>Open Source</h3>
+      <div class="price">R$0<span>/mes</span></div>
+      <ul class="price-features">
+        <li>Codigo completo (Apache 2.0)</li>
+        <li>9 agentes + 8 sistemas</li>
+        <li>5 backends de LLM</li>
+        <li>Dashboard web</li>
+        <li>Colonias remotas</li>
+        <li>Documentacao completa</li>
+        <li>Comunidade no GitHub</li>
+      </ul>
+      <a href="https://github.com/RAG7782/symbiont" class="cta" style="width:100%;text-align:center;">Instalar Gratis</a>
+    </div>
+    <div class="price-card featured">
+      <h3>Setup Assistido</h3>
+      <div class="price">R$2.000<span> unico</span></div>
+      <ul class="price-features">
+        <li>Tudo do Open Source +</li>
+        <li>Instalacao remota (2h)</li>
+        <li>Configuracao Ollama + modelos</li>
+        <li>Presets do seu dominio</li>
+        <li>Treinamento 1:1 (1h)</li>
+        <li>30 dias de suporte</li>
+        <li>Dataset inicial personalizado</li>
+      </ul>
+      <a href="mailto:renatoapgomes@gmail.com?subject=SYMBIONT Setup" class="cta" style="width:100%;text-align:center;">Contratar Setup</a>
+    </div>
+    <div class="price-card">
+      <h3>Enterprise</h3>
+      <div class="price">R$15.000<span> unico</span></div>
+      <ul class="price-features">
+        <li>Tudo do Setup +</li>
+        <li>Deploy multi-servidor</li>
+        <li>Federation configurada</li>
+        <li>Fine-tune personalizado</li>
+        <li>Dashboard customizado</li>
+        <li>Integracao com seus sistemas</li>
+        <li>90 dias de suporte + SLA</li>
+      </ul>
+      <a href="mailto:renatoapgomes@gmail.com?subject=SYMBIONT Enterprise" class="cta" style="width:100%;text-align:center;">Falar com Especialista</a>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- Curso -->
+<section style="background: var(--bg2);">
+<div class="container">
+  <h2>Curso: IA para Advogados</h2>
+  <p class="subtitle">10 horas praticas. Do basico ao fine-tune de modelos juridicos.</p>
+  <div class="grid" style="grid-template-columns: 1fr 1fr;">
+    <div>
+      <ul class="price-features">
+        <li>Modulo 1: Fundamentos de IA para o Direito</li>
+        <li>Modulo 2: Ferramentas Praticas (Chat → Agente)</li>
+        <li>Modulo 3: Analise Tributaria com IA</li>
+        <li>Modulo 4: Direito Trabalhista e Civil com IA</li>
+        <li>Modulo 5: Implantando IA no Escritorio</li>
+      </ul>
+    </div>
+    <div style="text-align:center;padding-top:24px;">
+      <div class="price">R$197</div>
+      <p style="color:var(--muted);margin:12px 0;">Acesso vitalicio + atualizacoes</p>
+      <a href="https://renatogomes.curseduca.pro" class="cta" style="display:inline-block;">Matricular Agora</a>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- Footer -->
+<footer>
+<div class="container">
+  <p>SYMBIONT v0.3.0 | Apache 2.0 | <a href="https://github.com/RAG7782/symbiont">GitHub</a> | <a href="https://doi.org/10.5281/zenodo.19325749">Paper</a></p>
+  <p style="margin-top:8px;">Renato Aparecido Gomes — Sao Paulo, Brasil</p>
+</div>
+</footer>
+
+</body>
+</html>
