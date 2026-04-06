@@ -10,7 +10,7 @@ from symbiont.finetune import FineTunePipeline
 from symbiont.handoffs import HANDOFF_MATRIX, can_handoff, can_escalate
 from symbiont.tools import ToolRegistry
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = [
     "Symbiont", "EchoBackend", "OllamaBackend", "ModalBackend",
     "IMIMemory", "Voice", "GPURouter", "FineTunePipeline",

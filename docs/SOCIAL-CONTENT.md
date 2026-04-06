@@ -7,7 +7,7 @@
 
 ## 1. Announcement Post — LinkedIn (PT-BR)
 
-### SYMBIONT v0.2.0: Um organismo de IA multi-agente inspirado em 8 sistemas biologicos
+### SYMBIONT v0.3.0: Um organismo de IA multi-agente inspirado em 8 sistemas biologicos
 
 Depois de meses de pesquisa, lancei o SYMBIONT — um framework que integra 8 padroes
 biologicos de inteligencia de enxame para coordenar agentes de IA.
@@ -26,7 +26,7 @@ resolveram isso ha milhoes de anos sem nenhum coordenador central.
 
 **Numeros:**
 - 6.431 linhas de Python
-- 29/29 testes passando
+- 91/91 testes passando
 - 8 sistemas biologicos integrados
 - 5 backends de LLM (local + cloud)
 - 2 colonias remotas operacionais
@@ -44,7 +44,7 @@ Paper: doi.org/10.5281/zenodo.19325749
 
 ## 2. Announcement Post — LinkedIn (English)
 
-### SYMBIONT v0.2.0: A Multi-Agent AI Organism Inspired by 8 Biological Systems
+### SYMBIONT v0.3.0: A Multi-Agent AI Organism Inspired by 8 Biological Systems
 
 I built an AI framework that coordinates agents the way biological
 superorganisms coordinate — not with a central planner, but with
@@ -164,7 +164,7 @@ OpenClaw (cron automation). Remote colonies execute tasks via SSH.
 All of this with zero external dependencies in the core.
 
 **Tweet 8/8:**
-6,431 lines of Python. 29/29 tests. 8 biological systems.
+9,316 lines of Python. 91/91 tests. 8 biological systems.
 5 agent castes. 4 LLM backends. 3 deployment nodes.
 Paper submitted to ANTS 2026 (Darmstadt).
 
@@ -212,7 +212,7 @@ Build agents like biology does — from the bottom up.
    - Kestra orchestration
 
 7. **Results and What's Next** (300 words)
-   - 29/29 tests, 6,431 LOC, 3 deployment nodes
+   - 91/91 tests, 9,316 LOC, 3 deployment nodes
    - Fase 2: alertas, dashboard
    - Fase 3: fine-tuning pipeline
    - Vision: self-evolving multi-organism federation
@@ -248,7 +248,7 @@ Build agents like biology does — from the bottom up.
 7. Show colonies: `sym colony status` → 2 green
 8. Remote execution: `sym colony run kai "Analyze logs"` → runs on VPS
 9. Open Kestra dashboard → show 3 flows
-10. "All of this: 6,431 lines of Python, zero external dependencies, open source."
+10. "All of this: 9,316 lines of Python, zero external dependencies, open source."
 ```
 
 ---
@@ -273,8 +273,8 @@ Build agents like biology does — from the bottom up.
 - **5** phase lifecycle (Explore → Decide → Execute → Validate → Deliver)
 - **5** agent castes (Minima, Media, Major, Scout, Queen)
 - **4** dynamic quorum levels (LOW=2, MEDIUM=4, HIGH=6, CRITICAL=8)
-- **6,431** lines of Python
-- **29/29** tests passing
+- **9,316** lines of Python
+- **91/91** tests passing
 - **0.04s** test suite execution time
 - **$0** monthly cost (runs local on Ollama)
 - **3** deployment nodes (local + 2 VPS)

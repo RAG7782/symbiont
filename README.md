@@ -208,8 +208,8 @@ docs/
 
 | Metric | Value |
 |--------|-------|
-| Python modules | 31 |
-| Lines of code | 6,431 |
+| Python modules | 48 |
+| Lines of code | 9,316 |
 | Tests | 91/91 passing |
 | Biological systems | 8 |
 | Agent castes | 5 |

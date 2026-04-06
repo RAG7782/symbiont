@@ -27,14 +27,14 @@ unified lifecycle management.
 | Ephemeral coalitions | *Tursiops* (Dolphin) | `core/pod.py` | ~200 | Tested |
 
 **Evidence**: All 8 systems operate simultaneously in the same organism.
-29/29 unit tests pass, including integration tests that exercise the
+91/91 unit tests pass, including integration tests that exercise the
 full 5-phase lifecycle with all 8 systems active.
 
 **Reproduction**:
 ```bash
 git clone https://github.com/RAG7782/symbiont.git
 cd symbiont && pip install -e ".[dev]"
-pytest tests/ -v  # 29/29 pass
+pytest tests/ -v  # 91/91 pass
 ```
 
 ### Claim 2: Systems address orthogonal problems
@@ -128,12 +128,12 @@ SYMBIONT runs on real hardware across distributed nodes:
 
 | Metric | Value |
 |--------|-------|
-| Total LOC | 6,431 |
-| Test coverage (systems) | 8/8 systems tested |
-| Test pass rate | 29/29 (100%) |
+| Total LOC | 9,316 |
+| Test coverage (systems) | All modules tested (8 test files) |
+| Test pass rate | 91/91 (100%) |
 | Zero external deps | Core runs on Python stdlib only |
 | Async throughout | All agent communication is non-blocking |
-| Test execution time | 0.04 seconds |
+| Test execution time | 0.11 seconds |
 
 ### System Performance (EchoBackend)
 
@@ -192,7 +192,7 @@ Dependencies: Zero (core), optional Ollama/Anthropic/Modal
 |----------|----------|
 | Source code | github.com/RAG7782/symbiont |
 | Zenodo DOI | doi.org/10.5281/zenodo.19325749 |
-| Tag | v0.2.0 |
+| Tag | v0.3.0 |
 | Tests | `pytest tests/ -v` |
 | Kestra flows | `kestra/*.yml` |
 | Colony config | `~/.symbiont/colonies.json` |
@@ -205,7 +205,7 @@ git clone https://github.com/RAG7782/symbiont.git && cd symbiont
 pip install -e ".[dev]"
 
 # 2. Run tests
-pytest tests/ -v  # Expected: 29/29 pass
+pytest tests/ -v  # Expected: 91/91 pass
 
 # 3. Run organism with echo backend (no LLM needed)
 sym status --backend echo

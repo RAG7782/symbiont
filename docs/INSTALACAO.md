@@ -236,12 +236,12 @@ docker compose -f kestra-docker-compose.yml up -d
 
 # 2. Acessar dashboard
 open http://localhost:8080
-# Login: admin@agora.dev / Kestra2026!
+# Login with your Kestra credentials
 
 # 3. Os flows SYMBIONT estao em kestra/*.yml
 # Deploy via API:
 for flow in kestra/*.yml; do
-  cat "$flow" | curl -s -u "admin@agora.dev:Kestra2026!" \
+  cat "$flow" | curl -s -u "$KESTRA_USER:$KESTRA_PASS" \
     -X POST "localhost:8080/api/v1/flows" \
     -H "Content-Type: application/x-yaml" \
     --data-binary @-
@@ -277,4 +277,4 @@ pip uninstall symbiont
 
 ---
 
-*SYMBIONT v0.2.0 + Fase 1 (Distributed)*
+*SYMBIONT v0.3.0*

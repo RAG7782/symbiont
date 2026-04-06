@@ -1,6 +1,6 @@
 # SYMBIONT Architecture Reference
 
-> Version 0.2.0 | Updated 2026-04-06 (Fase 1 Complete)
+> Version 0.3.0 | Updated 2026-04-06
 
 ## 1. Design Philosophy
 
@@ -294,12 +294,12 @@ organism = Symbiont(config=config)
 
 | Metric | Value |
 |--------|-------|
-| Total Python files | 31 |
-| Total lines of code | 6,431 |
+| Total Python files | 48 |
+| Total lines of code | 9,316 |
 | Core systems | 1,881 LOC |
 | Agent layer | 1,123 LOC |
 | Infrastructure | 3,427 LOC |
-| Tests | 29/29 (420 LOC) |
+| Tests | 91/91 (971 LOC) |
 | Kestra flows | 3 (152 LOC YAML) |
 | Zero external dependencies | Core runs on stdlib only |
 | Async throughout | All agent communication is async |

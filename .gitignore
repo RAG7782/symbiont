@@ -17,3 +17,25 @@ venv/
 .mcp.json
 HANDOFF-*.md
 .DS_Store
+Thumbs.db
+
+# Secrets / credentials
+*.key
+*.pem
+*.p12
+credentials.json
+secrets.json
+.env.local
+.env.production
+
+# SQLite WAL
+*.db-wal
+*.db-shm
+
+# Modal
+.modal/
+
+# IDE
+.idea/
+.vscode/
+*.swp

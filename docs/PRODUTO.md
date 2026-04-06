@@ -234,5 +234,5 @@ sym "Qual e a capital do Brasil?"
 
 ---
 
-*SYMBIONT v0.2.0 — Apache 2.0 License*
+*SYMBIONT v0.3.0 — Apache 2.0 License*
 *github.com/RAG7782/symbiont*
