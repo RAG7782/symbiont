@@ -33,9 +33,20 @@ class WorkerAgent(BaseAgent):
     def __init__(self, agent_id: str | None = None) -> None:
         super().__init__(
             caste=Caste.MEDIA,
-            capabilities={"code", "analysis", "transform", "test", "review"},
+            capabilities={"code", "analysis", "transform", "test", "review", "tools"},
             agent_id=agent_id,
         )
+        self._tools = None
+
+    def set_tools(self, tools) -> None:
+        """Set the ToolRegistry for this worker (CLI Anything harnesses + system tools)."""
+        self._tools = tools
+
+    async def use_tool(self, tool_name: str, command: str) -> dict:
+        """Execute a tool command via CLI Anything or system CLI."""
+        if self._tools and self._tools.has_tool(tool_name):
+            return await self._tools.run(tool_name, command)
+        return {"error": f"Tool '{tool_name}' not available"}
 
     async def execute(self, task: str, context: dict | None = None) -> Any:
         """

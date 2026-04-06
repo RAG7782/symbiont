@@ -248,6 +248,19 @@ def main():
             print(f"\n   Recommended: {status['recommended']}")
         except Exception as e:
             print(f"Error: {e}")
+    elif task_text.lower() == "tools":
+        # Show available tools
+        try:
+            from symbiont.tools import ToolRegistry
+            tools = ToolRegistry()
+            s = tools.summary()
+            print("🔧 Tools disponíveis:")
+            if s["harnesses"]:
+                print(f"   CLI Harnesses: {', '.join(s['harnesses'])}")
+            print(f"   System tools: {', '.join(s['system_tools'])}")
+            print(f"   Total: {s['total']}")
+        except Exception as e:
+            print(f"Error: {e}")
     elif task_text.lower().startswith("finetune"):
         # Fine-tune pipeline
         try:

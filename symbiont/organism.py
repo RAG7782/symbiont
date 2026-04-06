@@ -93,10 +93,18 @@ class Symbiont:
 
         # --- LLM backend (pluggable) ---
         self._llm_backend: Any = None
+        self._tools: Any = None
 
         # --- State ---
         self._running = False
         self._boot_complete = False
+
+        # --- Auto-detect tools ---
+        try:
+            from symbiont.tools import ToolRegistry
+            self._tools = ToolRegistry()
+        except Exception:
+            pass
 
     # ==================================================================
     # LLM Backend
@@ -202,6 +210,10 @@ class Symbiont:
 
         if self._llm_backend:
             agent.set_llm_backend(self._llm_backend)
+
+        # Wire tools to Workers
+        if self._tools and hasattr(agent, 'set_tools'):
+            agent.set_tools(self._tools)
 
         # Register capabilities with PodDynamics
         self.pods.register_capabilities(agent.id, agent.capabilities)
