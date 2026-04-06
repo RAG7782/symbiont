@@ -154,7 +154,7 @@ pip install -e ".[dev]"
 ## Running Tests
 
 ```bash
-pytest tests/ -v   # 29 tests across all 8 systems + integration
+pytest tests/ -v   # 91 tests across all modules
 ```
 
 ## Project Structure
@@ -210,7 +210,7 @@ docs/
 |--------|-------|
 | Python modules | 31 |
 | Lines of code | 6,431 |
-| Tests | 29/29 passing |
+| Tests | 91/91 passing |
 | Biological systems | 8 |
 | Agent castes | 5 |
 | LLM backends | 4 (Echo, Ollama, OpenRouter, Anthropic) |

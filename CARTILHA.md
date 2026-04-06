@@ -124,26 +124,67 @@ sym -i screenshot.png "Identifique problemas de UX nesta tela"
 ### Fine-Tuning (criar modelo customizado)
 
 ```bash
-# Ver modelos base disponiveis
-sym finetune
+# Ver presets disponiveis
+sym finetune list
 
-# Treinar modelo customizado (roda no Modal GPU)
-# 1. Prepare seu dataset em JSONL:
-#    {"instruction": "...", "input": "...", "output": "..."}
-#
-# 2. Execute:
-python3 -c "
-import asyncio
-from symbiont.finetune import FineTunePipeline
-pipe = FineTunePipeline()
-result = asyncio.run(pipe.run(
-    base_model='unsloth/Qwen2.5-7B-bnb-4bit',
-    dataset_path='meu_dataset.jsonl',
-    output_name='meu-modelo-custom',
-))
-print(result)
-"
-# 3. Resultado: modelo aparece no Ollama como 'meu-modelo-custom'
+# Preparar dataset de um preset
+sym finetune prepare legal-br      # Gera data/legal-br-train.jsonl
+sym finetune prepare coding-python # Gera data/coding-python-train.jsonl
+
+# Validar dataset
+sym finetune validate data/legal-br-train.jsonl
+
+# Rodar fine-tune completo (Modal GPU, ~$1-5)
+sym finetune run legal-br
+# Pipeline: dataset → Modal (Unsloth+LoRA) → GGUF → Ollama
+
+# Resultado: modelo 'symbiont-legal-br' aparece no Ollama
+```
+
+### HTTP Bridge (integracoes externas)
+
+```bash
+# Iniciar o bridge (serve o Mycelium via HTTP + dashboard)
+sym serve                          # Porta 7777, backend ollama
+sym serve --backend echo --port 8888  # Teste sem LLM
+
+# Abrir dashboard no browser
+open http://localhost:7777         # UI com agentes, canais, colonias
+
+# Enviar webhook ao Mycelium
+curl -X POST localhost:7777/webhook \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"meu.evento","payload":{"dado":123}}'
+
+# Executar tarefa via HTTP
+curl -X POST localhost:7777/task \
+  -H "Content-Type: application/json" \
+  -d '{"task":"Analise este contrato"}'
+```
+
+### Colonias Remotas (multi-servidor)
+
+```bash
+sym colony list                    # Ver colonias conhecidas
+sym colony status                  # Ping todas
+sym colony deploy kai              # Deploy SYMBIONT em VPS
+sym colony run kai "tarefa"        # Executar remoto
+sym colony heartbeat               # Health check rapido
+```
+
+### Squads (agrupamento por projeto)
+
+```bash
+sym squad list                     # Ver squads
+sym squad create legal "Equipe juridica"  # Criar squad
+sym squad auto                     # Auto-assign agentes por caste
+```
+
+### Federation (multi-organismo)
+
+```bash
+sym federation status              # Ver peers
+sym federation add kai http://100.73.123.8:7777  # Registrar peer
 ```
 
 ---
@@ -242,8 +283,15 @@ sym status                # Dashboard
 sym memories              # IMI stats
 sym dream                 # Consolidar memorias
 sym gpu                   # GPU providers
-sym finetune              # Pipeline de fine-tune
+sym finetune list         # Presets de fine-tune
+sym finetune prepare X    # Gerar dataset
+sym finetune run X        # Rodar fine-tune (Modal)
 sym voice                 # Voice capabilities
+sym serve                 # HTTP bridge + dashboard
+sym colony list           # Colonias remotas
+sym colony run kai "X"    # Executar em colonia
+sym squad list            # Squads por projeto
+sym federation status     # Peers da federacao
 
 # === OLLAMA DIRETO ===
 o-code                    # Chat coding (Qwen 3.5)
@@ -273,5 +321,5 @@ jarvis                    # Assistente de voz continuo
 
 ---
 
-*SYMBIONT v0.2.0 — Atualizado 2026-04-06*
-*29/29 testes | 7 modelos | 5 backends | 9 agentes | IMI memory*
+*SYMBIONT v0.3.0 — Atualizado 2026-04-06*
+*91/91 testes | 7 modelos | 5 backends | 9 agentes | IMI memory | Dashboard | Colonias | Federation*
