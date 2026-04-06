@@ -303,9 +303,10 @@ class BaseAgent(ABC):
     # LLM interaction (model-agnostic)
     # ------------------------------------------------------------------
 
-    async def think(self, prompt: str, context: dict | None = None) -> str:
+    async def think(self, prompt: str, context: dict | None = None, images: list | None = None) -> str:
         """
         Use the LLM backend to reason about a prompt.
+        Optionally pass images for multimodal analysis.
         Falls back to a simple echo if no backend is configured.
         """
         if self._llm_backend:
@@ -313,9 +314,38 @@ class BaseAgent(ABC):
                 prompt=prompt,
                 context=context or {},
                 model_tier=self._get_model_tier(),
+                images=images,
             )
         # Fallback: no LLM backend — return the prompt as a marker
         return f"[{self.caste.name}:{self.id}] would think about: {prompt[:100]}"
+
+    async def think_deep(self, prompt: str, context: dict | None = None, images: list | None = None) -> str:
+        """
+        Use the 'reason' tier (Nemotron) for deep reasoning tasks.
+        Falls back to regular think() if reason tier not available.
+        """
+        if self._llm_backend:
+            return await self._llm_backend.complete(
+                prompt=prompt,
+                context=context or {},
+                model_tier="reason",
+                images=images,
+            )
+        return await self.think(prompt, context, images=images)
+
+    async def think_vision(self, prompt: str, images: list, context: dict | None = None) -> str:
+        """
+        Use a vision model to analyze images.
+        Automatically routes to the 'vision' tier.
+        """
+        if self._llm_backend:
+            return await self._llm_backend.complete(
+                prompt=prompt,
+                context=context or {},
+                model_tier="vision",
+                images=images,
+            )
+        return f"[{self.caste.name}:{self.id}] would analyze {len(images)} image(s): {prompt[:100]}"
 
     def _get_model_tier(self) -> str:
         """Map caste to model tier."""

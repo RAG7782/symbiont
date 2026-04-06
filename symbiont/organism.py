@@ -16,6 +16,7 @@ import logging
 from typing import Any
 
 from symbiont.config import SymbiontConfig
+from symbiont.handoffs import HANDOFF_MATRIX, can_handoff, can_escalate, summary as handoff_summary
 from symbiont.core.mycelium import Mycelium
 from symbiont.core.topology import TopologyEngine
 from symbiont.core.castes import CasteRegistry
@@ -252,7 +253,7 @@ class Symbiont:
     # Task Execution (the primary interface)
     # ==================================================================
 
-    async def execute(self, task: str, context: dict | None = None) -> dict:
+    async def execute(self, task: str, context: dict | None = None, images: list | None = None) -> dict:
         """
         Execute a task through the SYMBIONT organism.
 
@@ -262,6 +263,11 @@ class Symbiont:
         3. EXECUTION: Workers execute the chosen approach
         4. VALIDATION: Review the results
         5. DELIVERY: Return the final output
+
+        Args:
+            task: The task description
+            context: Optional context dict
+            images: Optional list of image paths/bytes for multimodal tasks
 
         The human calls this method — everything else is emergent.
         """
@@ -333,9 +339,12 @@ class Symbiont:
         execution_result = None
         if workers:
             worker = workers[0]
+            exec_context = {**context, "session": session.id, "approach": chosen_approach}
+            if images:
+                exec_context["images"] = images
             execution_result = await worker.execute(
                 chosen_approach,
-                {**context, "session": session.id, "approach": chosen_approach},
+                exec_context,
             )
 
         # --- Phase 4: VALIDATION (Major reviews) ---
@@ -483,6 +492,7 @@ class Symbiont:
                 "by_state": self._count_by_state(),
             },
             "governance": self.governor.summary(),
+            "handoffs": handoff_summary(),
             "pods": self.pods.summary(),
             "murmuration": self.murmuration.topology_summary(),
             "topology": {

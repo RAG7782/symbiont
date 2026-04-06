@@ -44,9 +44,13 @@ class WorkerAgent(BaseAgent):
         self.set_current_task(task)
         context = context or {}
 
-        # Use LLM to perform the task
+        # Use LLM to perform the task (multimodal if images provided)
         work_prompt = self._build_work_prompt(task, context)
-        result = await self.think(work_prompt, context)
+        images = context.get("images") if context else None
+        if images:
+            result = await self.think_vision(work_prompt, images=images, context=context)
+        else:
+            result = await self.think(work_prompt, context)
 
         # Determine artifact kind from task type
         kind = self._infer_artifact_kind(task)

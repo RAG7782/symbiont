@@ -86,7 +86,7 @@ class MajorAgent(BaseAgent):
             f"3. TRADE-OFFS: What we're giving up\n"
             f"4. IMPLEMENTATION NOTES: Key considerations for the Workers\n"
         )
-        return await self.think(prompt, context)
+        return await self.think_deep(prompt, context)
 
     async def _disambiguate(self, task: str, context: dict) -> str:
         options = context.get("options", [])
@@ -122,7 +122,7 @@ class MajorAgent(BaseAgent):
             f"Number of reports: {len(reports)}\n\n"
             f"Make the final call. Choose one option and justify.\n"
         )
-        return await self.think(prompt, context)
+        return await self.think_deep(prompt, context)
 
     async def _generic_decision(self, task: str, context: dict) -> str:
         prompt = (
