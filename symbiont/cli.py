@@ -177,6 +177,17 @@ def main():
         default=[],
         help="Caminho de imagem para análise multimodal (pode repetir: -i img1.png -i img2.jpg)",
     )
+    parser.add_argument(
+        "--port", "-p",
+        type=int,
+        default=7777,
+        help="Porta do HTTP bridge (default: 7777)",
+    )
+    parser.add_argument(
+        "--host",
+        default="0.0.0.0",
+        help="Host do HTTP bridge (default: 0.0.0.0)",
+    )
 
     args = parser.parse_args()
 
@@ -261,6 +272,22 @@ def main():
             print(f"   Total: {s['total']}")
         except Exception as e:
             print(f"Error: {e}")
+    elif task_text.lower() == "serve":
+        # Start the HTTP bridge
+        from symbiont.serve import serve as start_serve
+        asyncio.run(start_serve(
+            host=args.host,
+            port=args.port,
+            backend_name=args.backend,
+            light=args.light,
+            verbose=args.verbose,
+        ))
+    elif task_text.lower().startswith("colony"):
+        # Remote colony management
+        parts = task_text.split(maxsplit=1)
+        colony_args = parts[1] if len(parts) > 1 else ""
+        from symbiont.colony import colony_cmd
+        asyncio.run(colony_cmd(colony_args, args.backend, args.verbose))
     elif task_text.lower().startswith("finetune"):
         # Fine-tune pipeline
         try:

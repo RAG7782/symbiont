@@ -1,0 +1,76 @@
+id: task_dispatch
+namespace: symbiont
+description: |
+  Webhook-triggered task dispatch — receives tasks from external systems
+  and forwards them to SYMBIONT for execution.
+
+labels:
+  project: symbiont
+  stage: production
+
+inputs:
+  - id: task
+    type: STRING
+    description: Task description for SYMBIONT to execute
+    required: true
+
+  - id: context
+    type: STRING
+    description: JSON context for the task
+    required: true
+    defaults: "{}"
+
+  - id: channel
+    type: STRING
+    description: Mycelium channel to publish to
+    required: true
+    defaults: "kestra.task"
+
+  - id: priority
+    type: INT
+    description: Message priority (1=highest, 10=lowest)
+    required: true
+    defaults: "5"
+
+tasks:
+  - id: dispatch_to_symbiont
+    type: io.kestra.plugin.core.http.Request
+    uri: http://host.docker.internal:7777/task
+    method: POST
+    contentType: application/json
+    body: |
+      {
+        "task": "{{ inputs.task }}",
+        "context": {{ inputs.context }}
+      }
+    options:
+      connectTimeout: PT10S
+      readTimeout: PT120S
+
+  - id: notify_webhook
+    type: io.kestra.plugin.core.http.Request
+    uri: http://host.docker.internal:7777/webhook
+    method: POST
+    contentType: application/json
+    body: |
+      {
+        "channel": "{{ inputs.channel }}",
+        "payload": {
+          "flow": "task_dispatch",
+          "task": "{{ inputs.task }}",
+          "status": "completed",
+          "result_code": {{ outputs.dispatch_to_symbiont.code }}
+        },
+        "sender": "kestra.task_dispatch",
+        "priority": {{ inputs.priority }}
+      }
+    options:
+      connectTimeout: PT5S
+      readTimeout: PT10S
+
+  - id: log_result
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      Task dispatched to SYMBIONT:
+      Task: {{ inputs.task }}
+      Result: {{ outputs.dispatch_to_symbiont.code }}

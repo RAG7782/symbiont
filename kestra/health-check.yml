@@ -1,0 +1,40 @@
+id: health_check
+namespace: symbiont
+description: |
+  Periodic health check — pings SYMBIONT HTTP bridge and colonies.
+  Runs every 15 minutes.
+
+labels:
+  project: symbiont
+  stage: production
+
+triggers:
+  - id: schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "*/15 * * * *"
+
+tasks:
+  - id: check_bridge
+    type: io.kestra.plugin.core.http.Request
+    uri: http://host.docker.internal:7777/health
+    method: GET
+    options:
+      connectTimeout: PT5S
+      readTimeout: PT10S
+    allowFailed: true
+
+  - id: check_status
+    type: io.kestra.plugin.core.http.Request
+    uri: http://host.docker.internal:7777/status
+    method: GET
+    options:
+      connectTimeout: PT5S
+      readTimeout: PT10S
+    allowFailed: true
+
+  - id: log_result
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      SYMBIONT Health Check:
+      Bridge: {{ outputs.check_bridge.code }}
+      Status: {{ outputs.check_status.code }}

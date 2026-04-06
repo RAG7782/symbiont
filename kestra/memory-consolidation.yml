@@ -1,0 +1,36 @@
+id: memory_consolidation
+namespace: symbiont
+description: |
+  IMI memory dream cycle — consolidates memories periodically.
+  Runs every 6 hours.
+
+labels:
+  project: symbiont
+  stage: production
+
+triggers:
+  - id: schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 */6 * * *"
+
+tasks:
+  - id: trigger_dream
+    type: io.kestra.plugin.core.http.Request
+    uri: http://host.docker.internal:7777/webhook
+    method: POST
+    contentType: application/json
+    body: |
+      {
+        "channel": "system.memory",
+        "payload": {"action": "dream", "trigger": "kestra-cron"},
+        "sender": "kestra.memory_consolidation"
+      }
+    options:
+      connectTimeout: PT5S
+      readTimeout: PT30S
+
+  - id: log_result
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      Memory consolidation triggered: {{ outputs.trigger_dream.code }}
+      Response: {{ outputs.trigger_dream.body }}
