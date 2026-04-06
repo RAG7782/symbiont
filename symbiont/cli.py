@@ -289,25 +289,89 @@ def main():
         from symbiont.colony import colony_cmd
         asyncio.run(colony_cmd(colony_args, args.backend, args.verbose))
     elif task_text.lower().startswith("finetune"):
-        # Fine-tune pipeline
-        try:
+        # Fine-tune pipeline with preset support
+        parts = task_text.split()
+        subcmd = parts[1] if len(parts) > 1 else "list"
+
+        if subcmd == "list":
+            from symbiont.datasets import list_presets
+            print("🔧 Fine-tune Presets")
+            print("=" * 60)
+            for name, info in list_presets().items():
+                print(f"  {name:20s} {info['description']}")
+                print(f"  {'':20s} base: {info['base_model']}")
+                print(f"  {'':20s} examples: {info['examples']} | output: {info['output_name']}")
+                print()
             from symbiont.finetune import FineTunePipeline
+            pipe = FineTunePipeline()
+            print(f"  Modal: {'available' if pipe.available else 'not installed (pip install modal)'}")
+            print(f"\n  Commands:")
+            print(f"    sym finetune list              — show presets")
+            print(f"    sym finetune prepare <preset>   — generate dataset")
+            print(f"    sym finetune run <preset>       — full pipeline (Modal GPU)")
+            print(f"    sym finetune validate <path>    — validate JSONL dataset")
+
+        elif subcmd == "prepare":
+            from symbiont.datasets import generate_dataset, PRESETS
+            preset = parts[2] if len(parts) > 2 else ""
+            if preset not in PRESETS:
+                print(f"Unknown preset: {preset}. Available: {list(PRESETS.keys())}")
+                sys.exit(1)
+            output = f"data/{preset}-train.jsonl"
+            result = generate_dataset(preset, output)
+            print(f"📦 Dataset prepared: {result['examples']} examples → {output}")
+            print(f"   Base model: {result['base_model']}")
+            print(f"   Output model: {result['output_name']}")
+
+        elif subcmd == "validate":
+            from symbiont.datasets import validate_dataset
+            path = parts[2] if len(parts) > 2 else ""
+            if not path:
+                print("Usage: sym finetune validate <path.jsonl>")
+                sys.exit(1)
+            result = validate_dataset(path)
+            if result["valid"]:
+                print(f"✅ Valid: {result['examples']} examples in {path}")
+            else:
+                print(f"❌ Invalid: {result['errors']}")
+
+        elif subcmd == "run":
+            from symbiont.datasets import PRESETS, generate_dataset
+            from symbiont.finetune import FineTunePipeline
+            preset_name = parts[2] if len(parts) > 2 else ""
+            if preset_name not in PRESETS:
+                print(f"Unknown preset: {preset_name}. Available: {list(PRESETS.keys())}")
+                sys.exit(1)
             pipe = FineTunePipeline()
             if not pipe.available:
                 print("Modal not installed. Run: pip install modal")
                 sys.exit(1)
-            parts = task_text.split()
-            base = parts[1] if len(parts) > 1 else "unsloth/Qwen2.5-7B-bnb-4bit"
-            name = parts[2] if len(parts) > 2 else "symbiont-custom"
-            print(f"🔧 Fine-tune Pipeline: {base} → {name}")
-            print(f"   GPU: L4 | Epochs: 1 | LoRA r=16")
-            print(f"   Available base models:")
-            for m in pipe.list_base_models():
-                print(f"     - {m}")
-            print(f"\n   To run: sym finetune {base} {name}")
-            print(f"   (Full pipeline: Unsloth → Modal GPU → GGUF → Ollama)")
-        except Exception as e:
-            print(f"Error: {e}")
+            preset = PRESETS[preset_name]
+            # Prepare dataset
+            data_path = f"data/{preset_name}-train.jsonl"
+            gen = generate_dataset(preset_name, data_path)
+            print(f"📦 Dataset: {gen['examples']} examples → {data_path}")
+            # Run pipeline
+            print(f"🔧 Starting fine-tune: {preset['base_model']} → {preset['output_name']}")
+            print(f"   GPU: {preset['gpu']} | Epochs: {preset['epochs']} | LoRA r={preset['lora_r']}")
+            result = asyncio.run(pipe.run(
+                base_model=preset["base_model"],
+                dataset_path=data_path,
+                output_name=preset["output_name"],
+                gpu=preset["gpu"],
+                epochs=preset["epochs"],
+                lora_r=preset["lora_r"],
+                max_seq_length=preset["max_seq_length"],
+            ))
+            print(f"\n📊 Result: {json.dumps(result, indent=2)}")
+
+        else:
+            # Legacy: sym finetune <base_model> <name>
+            from symbiont.finetune import FineTunePipeline
+            pipe = FineTunePipeline()
+            print(f"🔧 Fine-tune: {subcmd}")
+            print(f"   Use 'sym finetune list' for presets")
+            print(f"   Use 'sym finetune run <preset>' for full pipeline")
     else:
         images = args.image if args.image else None
         asyncio.run(run_task(task_text, args.backend, context, args.verbose, args.light, images))
