@@ -262,8 +262,11 @@ class Auditor:
                 auto_fixable=True,
             ))
 
-        # 2. Check dirty files
-        ok, out = self._run(["git", "status", "--porcelain"], cwd=repo_path)
+        # 2. Check dirty files (ignore submodule untracked content)
+        ok, out = self._run(
+            ["git", "status", "--porcelain", "--ignore-submodules=untracked"],
+            cwd=repo_path,
+        )
         if ok and out:
             lines = [l for l in out.split("\n") if l.strip()]
             modified = [l for l in lines if not l.startswith("??")]

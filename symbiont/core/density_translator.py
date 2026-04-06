@@ -78,7 +78,7 @@ _TRIBUTARIO_DICT = DomainDictionary(
         "elisão fiscal": "planejamento tributário lícito para reduzir a carga tributária",
     },
     zero_patterns=[
-        r"^\d+[\.,]\d+$",   # numeric values
+        r"^\d[\d\.,]*\d$",   # numeric values (incl. PT-BR format: 1.234,56)
         r"^R\$\s*[\d\.,]+$", # currency values
         r"^§\s*\d+",         # paragraph references
         r"^art\.\s*\d+",     # article references
