@@ -157,16 +157,112 @@ sym gpu
 
 ---
 
+## Passo 8: HTTP Bridge (Integracoes Externas)
+
+```bash
+# Iniciar o bridge HTTP (porta 7777)
+sym serve --backend ollama --port 7777
+
+# Testar
+curl localhost:7777/health
+# {"ok": true, "service": "symbiont"}
+
+# Enviar webhook
+curl -X POST localhost:7777/webhook \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"test","payload":{"hello":"world"}}'
+
+# Executar tarefa via HTTP
+curl -X POST localhost:7777/task \
+  -H "Content-Type: application/json" \
+  -d '{"task":"Analise o status do sistema"}'
+
+# Ver canais ativos do Mycelium
+curl localhost:7777/channels
+```
+
+Para rodar como servico permanente (launchd no macOS):
+
+```bash
+# Criar plist para auto-start
+cat > ~/Library/LaunchAgents/dev.symbiont.serve.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>dev.symbiont.serve</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/sym</string>
+    <string>serve</string>
+    <string>--backend</string>
+    <string>ollama</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>
+EOF
+launchctl load ~/Library/LaunchAgents/dev.symbiont.serve.plist
+```
+
+## Passo 9: Colonias Remotas (Distribuido)
+
+Requer: VPS com Ubuntu 22+ e Tailscale instalado.
+
+```bash
+# 1. Instalar Tailscale na VPS
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale up
+
+# 2. Registrar a colonia
+# A config fica em ~/.symbiont/colonies.json
+# Edite para adicionar seus IPs Tailscale
+
+# 3. Deploy automatico
+sym colony deploy kai    # Faz rsync + instala
+
+# 4. Testar
+sym colony status        # Ver quais estao online
+sym colony heartbeat     # Ping rapido
+sym colony run kai "Analise os logs do servidor"  # Executar remoto
+```
+
+## Passo 10: Kestra (Orquestracao)
+
+```bash
+# 1. Subir Kestra via Docker
+docker compose -f kestra-docker-compose.yml up -d
+
+# 2. Acessar dashboard
+open http://localhost:8080
+# Login: admin@agora.dev / Kestra2026!
+
+# 3. Os flows SYMBIONT estao em kestra/*.yml
+# Deploy via API:
+for flow in kestra/*.yml; do
+  cat "$flow" | curl -s -u "admin@agora.dev:Kestra2026!" \
+    -X POST "localhost:8080/api/v1/flows" \
+    -H "Content-Type: application/x-yaml" \
+    --data-binary @-
+done
+```
+
+---
+
 ## Verificacao Final
 
 ```bash
 # Tudo funcionando?
-sym --backend echo "Hello SYMBIONT"   # Teste sem LLM
-sym status                             # Dashboard
-sym memories                           # IMI
-sym gpu                                # GPU providers
-sym voice                              # Voz
-ollama list                            # Modelos
+sym --backend echo "Hello SYMBIONT"    # Teste sem LLM
+sym status                              # Dashboard
+sym memories                            # IMI
+sym gpu                                 # GPU providers
+sym voice                               # Voz
+sym serve --backend echo &              # Bridge HTTP
+curl localhost:7777/health              # Liveness
+sym colony list                         # Colonias
+ollama list                             # Modelos
 ```
 
 ## Desinstalacao
@@ -176,8 +272,9 @@ pip uninstall symbiont
 # Modelos Ollama continuam em ~/.ollama/models/
 # Para remover modelos: ollama rm <modelo>
 # Para remover Ollama: rm -rf ~/.ollama && brew uninstall ollama
+# Para remover colonias: rm ~/.symbiont/colonies.json
 ```
 
 ---
 
-*SYMBIONT v0.2.0*
+*SYMBIONT v0.2.0 + Fase 1 (Distributed)*

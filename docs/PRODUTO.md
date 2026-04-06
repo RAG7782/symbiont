@@ -151,6 +151,22 @@ que exploram, decidem, executam e validam tarefas — como um organismo vivo.
 - **Handoff Matrix** — regras formais de colaboracao
 - **CLI `sym`** — 12+ comandos, 1 binario
 
+### Infraestrutura Distribuida (Fase 1)
+
+| Componente | O Que Faz | Como Usar |
+|------------|-----------|-----------|
+| **HTTP Bridge** | Conecta o Mycelium a sistemas externos via HTTP | `sym serve --port 7777` |
+| **Colonias Remotas** | Executa SYMBIONT em VPS via SSH/Tailscale | `sym colony run kai "tarefa"` |
+| **Kestra Flows** | Automacao de health checks, memoria, task dispatch | Kestra dashboard :8080 |
+| **OpenClaw Cron** | Automacao via cron jobs (health, dream, heartbeat) | `openclaw cron list` |
+
+**Para o cliente final**: com um comando (`sym serve`), o SYMBIONT
+se torna um servico HTTP que qualquer sistema pode chamar.
+Integra com n8n, Kestra, Make, Zapier, ou qualquer webhook.
+
+**Para empresas**: deploy distribuido em multiplos servidores.
+Um organismo central + colonias remotas que processam tarefas em paralelo.
+
 ---
 
 ## Requisitos Minimos

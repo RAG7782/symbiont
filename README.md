@@ -85,6 +85,60 @@ async def main():
 asyncio.run(main())
 ```
 
+## Distributed Architecture
+
+SYMBIONT is not limited to a single machine. It can operate as a distributed organism across multiple nodes.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    SYMBIONT Organism                      │
+│  ┌─────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐  │
+│  │ Mycelium│──│ Waggle   │──│ Governor │──│ Mound   │  │
+│  │ (msgs)  │  │ (decide) │  │ (phases) │  │ (store) │  │
+│  └────┬────┘  └──────────┘  └──────────┘  └─────────┘  │
+│       │                                                  │
+│  ┌────┴──────────────────────────────────────────────┐  │
+│  │              HTTP Bridge (port 7777)               │  │
+│  │  POST /webhook  POST /task  GET /status            │  │
+│  └──────────┬────────────────────┬───────────────────┘  │
+└─────────────┼────────────────────┼───────────────────────┘
+              │                    │
+    ┌─────────┴───────┐  ┌────────┴────────┐
+    │  Kestra (flows)  │  │  VPS Colonies   │
+    │  - health 15m    │  │  - Kai (SSH)    │
+    │  - dream  6h     │  │  - Alan (SSH)   │
+    │  - dispatch      │  │  via Tailscale  │
+    └─────────────────┘  └─────────────────┘
+```
+
+### HTTP Bridge (`sym serve`)
+
+Exposes the Mycelium to external systems via HTTP:
+
+```bash
+sym serve --backend ollama --port 7777
+```
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/webhook` | POST | Publish event to a Mycelium channel |
+| `/task` | POST | Execute a full task through the organism |
+| `/status` | GET | Organism health dashboard |
+| `/channels` | GET | Active Mycelium channels |
+| `/health` | GET | Liveness probe |
+
+### Remote Colonies (`sym colony`)
+
+Deploy and manage SYMBIONT instances on remote VPS nodes via SSH over Tailscale:
+
+```bash
+sym colony list                    # Show known colonies
+sym colony status                  # Ping all colonies
+sym colony deploy kai              # Deploy SYMBIONT to a colony
+sym colony run kai "Analyze logs"  # Execute task remotely
+sym colony heartbeat               # Quick health check
+```
+
 ## Installation
 
 ```bash
@@ -100,39 +154,69 @@ pip install -e ".[dev]"
 ## Running Tests
 
 ```bash
-pytest tests/ -v
+pytest tests/ -v   # 29 tests across all 8 systems + integration
 ```
 
 ## Project Structure
 
 ```
 symbiont/
-├── __init__.py          # Exports Symbiont
 ├── organism.py          # Main integration — the Bauplan (body plan)
 ├── types.py             # Enums + dataclasses (Caste, Phase, Signal, etc.)
 ├── config.py            # Configuration for all 8 systems
-├── backends.py          # EchoBackend (test) + AnthropicBackend (production)
+├── backends.py          # 4 backends: Echo, Ollama, OpenRouter, Anthropic
+├── cli.py               # CLI: sym <task>, sym serve, sym colony, sym status
+├── serve.py             # HTTP bridge — connects Mycelium to external systems
+├── colony.py            # Remote colony management via SSH/Tailscale
+├── memory.py            # IMI cognitive memory integration
+├── voice.py             # Voice input/output (Whisper STT)
+├── gpu_router.py        # GPU cloud provider routing
+├── finetune.py          # Fine-tune pipeline (Unsloth → Modal → GGUF → Ollama)
+├── modal_backend.py     # Modal.com GPU backend
+├── handoffs.py          # Handoff Matrix — inter-caste task routing rules
+├── tools.py             # ToolRegistry — CLI Anything + system tools
 ├── core/
-│   ├── mycelium.py      # System 1: Message routing
-│   ├── topology.py      # System 2: Path optimization
-│   ├── castes.py        # System 3: Population management
-│   ├── waggle.py        # System 4: Decision protocol
-│   ├── mound.py         # System 5: Artifact storage + homeostasis
-│   ├── murmuration.py   # System 6: Neighbor coordination
-│   ├── governance.py    # System 7: Leadership + suppression
-│   └── pod.py           # System 8: Coalition formation
+│   ├── mycelium.py      # System 1: Adaptive message routing
+│   ├── topology.py      # System 2: Path optimization (Physarum)
+│   ├── castes.py        # System 3: Population management (Atta)
+│   ├── waggle.py        # System 4: Collective decision (Apis)
+│   ├── mound.py         # System 5: Artifact storage + homeostasis (Macrotermes)
+│   ├── murmuration.py   # System 6: Real-time reflexes (Sturnus)
+│   ├── governance.py    # System 7: Leadership + suppression (Wolf/Mole-rat)
+│   └── pod.py           # System 8: Coalition formation (Tursiops)
 ├── agents/
-│   ├── base.py          # Base agent
-│   ├── queen.py         # QUEEN caste
-│   ├── major.py         # MAJOR caste
-│   ├── scout.py         # SCOUT caste
-│   ├── worker.py        # MEDIA caste
-│   └── minima.py        # MINIMA caste
+│   ├── base.py          # Base agent with LLM integration
+│   ├── queen.py         # QUEEN — spawner caste
+│   ├── major.py         # MAJOR — specialist caste
+│   ├── scout.py         # SCOUT — explorer caste
+│   ├── worker.py        # MEDIA — execution caste
+│   └── minima.py        # MINIMA — lightweight caste
+kestra/                  # Workflow orchestration flows
+│   ├── health-check.yml       # Periodic health monitoring
+│   ├── memory-consolidation.yml  # IMI dream cycle
+│   └── task-dispatch.yml      # Webhook-triggered task execution
 tests/
-│   └── test_organism.py # 40+ tests across all 8 systems + integration
-examples/
-    └── demo.py          # Full lifecycle demo with EchoBackend
+│   └── test_organism.py # 29 tests across all 8 systems + integration
+docs/
+│   ├── ARCHITECTURE.md  # Full technical architecture reference
+│   ├── VALIDATION.md    # Empirical evidence and benchmarks
+│   ├── PRODUTO.md       # Commercial product documentation
+│   └── INSTALACAO.md    # Installation guide
 ```
+
+## Metrics
+
+| Metric | Value |
+|--------|-------|
+| Python modules | 31 |
+| Lines of code | 6,431 |
+| Tests | 29/29 passing |
+| Biological systems | 8 |
+| Agent castes | 5 |
+| LLM backends | 4 (Echo, Ollama, OpenRouter, Anthropic) |
+| CLI commands | 12+ |
+| Kestra flows | 3 |
+| Remote colonies | 2 (expandable) |
 
 ## Dynamic Quorum
 
