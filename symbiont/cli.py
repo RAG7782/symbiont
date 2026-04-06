@@ -282,6 +282,77 @@ def main():
             light=args.light,
             verbose=args.verbose,
         ))
+    elif task_text.lower().startswith("squad"):
+        parts = task_text.split(maxsplit=2)
+        subcmd = parts[1] if len(parts) > 1 else "list"
+        rest = parts[2] if len(parts) > 2 else ""
+        from symbiont.persistence import PersistenceStore
+        from symbiont.squads import SquadManager
+        store = PersistenceStore()
+        mgr = SquadManager(store=store)
+
+        if subcmd == "list":
+            squads = mgr.list_squads()
+            print("🎯 Squads")
+            print("=" * 60)
+            if not squads:
+                print("  No squads. Create one: sym squad create <name> <description>")
+            for name, info in squads.items():
+                print(f"  {name:15s} [{info['size']} agents] {info['description']}")
+        elif subcmd == "create":
+            cparts = rest.split(maxsplit=1)
+            name = cparts[0] if cparts else ""
+            desc = cparts[1] if len(cparts) > 1 else ""
+            if not name:
+                print("Usage: sym squad create <name> <description>")
+            else:
+                mgr.create(name, description=desc)
+                print(f"✅ Squad '{name}' created")
+        elif subcmd == "delete":
+            if mgr.delete(rest.strip()):
+                print(f"✅ Squad '{rest.strip()}' deleted")
+            else:
+                print(f"Squad '{rest.strip()}' not found")
+        elif subcmd == "auto":
+            logging.basicConfig(level=logging.WARNING)
+            from symbiont import Symbiont
+            org = Symbiont()
+            org.set_llm_backend(make_backend(args.backend))
+            asyncio.run(org.boot())
+            assignments = mgr.auto_assign(org)
+            asyncio.run(org.shutdown())
+            for sq, agents in assignments.items():
+                print(f"  {sq}: {len(agents)} agents")
+            print(f"✅ Auto-assigned {sum(len(a) for a in assignments.values())} agents to {len(assignments)} squads")
+        else:
+            print(f"Unknown: sym squad [list|create|delete|auto]")
+        store.close()
+    elif task_text.lower().startswith("federation"):
+        parts = task_text.split(maxsplit=2)
+        subcmd = parts[1] if len(parts) > 1 else "status"
+        from symbiont.persistence import PersistenceStore
+        from symbiont.federation import Federation
+        store = PersistenceStore()
+        fed = Federation(store=store)
+        if subcmd == "status":
+            s = fed.summary()
+            print(f"🌐 Federation: {s['organism_id']}")
+            print(f"   Bridge: {s['bridge_url']}")
+            print(f"   Peers: {s['alive_peers']}/{s['total_peers']} alive")
+            for pid, p in s["peers"].items():
+                icon = "🟢" if p["alive"] else "🔴"
+                print(f"   {icon} {pid:15s} {p['url']}")
+        elif subcmd == "add":
+            rest = parts[2] if len(parts) > 2 else ""
+            rparts = rest.split()
+            if len(rparts) < 2:
+                print("Usage: sym federation add <id> <url>")
+            else:
+                fed.register_peer(rparts[0], rparts[1])
+                print(f"✅ Registered peer {rparts[0]} at {rparts[1]}")
+        else:
+            print("Unknown: sym federation [status|add]")
+        store.close()
     elif task_text.lower().startswith("colony"):
         # Remote colony management
         parts = task_text.split(maxsplit=1)

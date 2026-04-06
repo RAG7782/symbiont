@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 # Global reference to the running organism (set by serve())
 _organism = None
 _event_loop = None
+_federation = None
+_store = None
 
 
 class _WebhookHandler(BaseHTTPRequestHandler):
@@ -82,6 +84,10 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             self._handle_webhook()
         elif self.path == "/task":
             self._handle_task()
+        elif self.path == "/federation/heartbeat":
+            self._handle_federation_heartbeat()
+        elif self.path == "/federation/register":
+            self._handle_federation_register()
         else:
             self._send_json(404, {"error": "not found"})
 
@@ -138,6 +144,25 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             "recent_messages": len(recent),
             "organism": _sanitize(_organism.status()),
         })
+
+    def _handle_federation_heartbeat(self):
+        body = self._read_body()
+        if _federation:
+            result = _federation.receive_heartbeat(
+                body.get("organism_id", ""), body.get("url", ""))
+            self._send_json(200, result)
+        else:
+            self._send_json(503, {"error": "federation not initialized"})
+
+    def _handle_federation_register(self):
+        body = self._read_body()
+        if _federation:
+            _federation.register_peer(
+                body.get("organism_id", ""), body.get("url", ""),
+                body.get("name", ""), body.get("metadata"))
+            self._send_json(200, {"ok": True})
+        else:
+            self._send_json(503, {"error": "federation not initialized"})
 
     def _handle_webhook(self):
         """Receive an external event and publish to a Mycelium channel."""
@@ -222,7 +247,7 @@ async def serve(host: str = "0.0.0.0", port: int = 7777, backend_name: str = "ol
     Boots the organism, starts the HTTP server in a thread,
     and keeps the event loop running for async operations.
     """
-    global _organism, _event_loop
+    global _organism, _event_loop, _federation, _store
 
     from symbiont import Symbiont
 
@@ -242,10 +267,18 @@ async def serve(host: str = "0.0.0.0", port: int = 7777, backend_name: str = "ol
     organism = Symbiont()
     organism.set_llm_backend(make_backend(backend_name, light=light))
 
+    # Initialize persistence and federation
+    from symbiont.persistence import PersistenceStore
+    from symbiont.federation import Federation
+    _store = PersistenceStore()
+    _federation = Federation(bridge_url=f"http://{host}:{port}", store=_store)
+
     print(f"🧬 SYMBIONT serve — booting ({backend_name})...")
     await organism.boot()
     _organism = organism
     print(f"   {organism.agent_count} agents online")
+    print(f"   Federation: {_federation.organism_id} ({len(_federation.peers)} peers)")
+    print(f"   Persistence: {_store.path}")
 
     # Start HTTP server in a thread
     server = HTTPServer((host, port), _WebhookHandler)
@@ -263,10 +296,12 @@ async def serve(host: str = "0.0.0.0", port: int = 7777, backend_name: str = "ol
     print(f"   GET  /health    — liveness probe")
     print()
 
-    # Start alert monitoring loop
+    # Start background tasks
     from symbiont.alerts import alert_loop
-    alert_task = asyncio.create_task(alert_loop(bridge_port=0))  # bridge_port=0 skips self-check
+    alert_task = asyncio.create_task(alert_loop(bridge_port=0))
+    fed_task = asyncio.create_task(_federation.federation_loop())
     print("🔔 Alert monitoring active")
+    print("🌐 Federation loop active")
 
     # Keep alive until interrupted
     try:
@@ -276,8 +311,17 @@ async def serve(host: str = "0.0.0.0", port: int = 7777, backend_name: str = "ol
         pass
     finally:
         alert_task.cancel()
+        fed_task.cancel()
         print("\n🧬 Shutting down...")
+        # Save state before shutdown
+        if _store and _organism:
+            _store.snapshot(_organism.mycelium)
+            print("   State persisted")
         server.shutdown()
         await organism.shutdown()
+        if _store:
+            _store.close()
         _organism = None
+        _federation = None
+        _store = None
         print("🧬 SYMBIONT serve stopped.")
