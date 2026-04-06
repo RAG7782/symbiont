@@ -51,6 +51,14 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length)
         return json.loads(raw)
 
+    def _send_html(self, status: int, html: str) -> None:
+        body = html.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     # --- Routes ---
 
     def do_GET(self):
@@ -60,6 +68,12 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             self._handle_channels()
         elif self.path == "/health":
             self._send_json(200, {"ok": True, "service": "symbiont"})
+        elif self.path == "/dashboard" or self.path == "/":
+            self._handle_dashboard()
+        elif self.path == "/alerts":
+            self._handle_alerts()
+        elif self.path == "/metrics":
+            self._handle_metrics()
         else:
             self._send_json(404, {"error": "not found"})
 
@@ -85,6 +99,45 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         channels = _organism.mycelium.get_active_channels()
         topology = _organism.mycelium.query_topology()
         self._send_json(200, {"channels": channels, "topology": _sanitize(topology)})
+
+    def _handle_dashboard(self):
+        from symbiont.dashboard import get_dashboard_html
+        self._send_html(200, get_dashboard_html())
+
+    def _handle_alerts(self):
+        from symbiont.alerts import get_alert_state
+        self._send_json(200, get_alert_state())
+
+    def _handle_metrics(self):
+        """Return enriched metrics: organism + colonies + mycelium."""
+        if not _organism:
+            self._send_json(503, {"error": "organism not running"})
+            return
+
+        # Colony status (cached from alert loop)
+        from symbiont.alerts import _state as alert_state
+        from symbiont.colony import _load_colonies
+        colonies_config = _load_colonies()
+        colony_metrics = {}
+        for name, info in colonies_config.items():
+            failures = alert_state.consecutive_failures.get(name, 0)
+            colony_metrics[name] = {
+                "host": info.get("host", ""),
+                "alive": failures == 0,
+                "consecutive_failures": failures,
+                "description": info.get("description", ""),
+            }
+
+        # Mycelium metrics
+        topology = _organism.mycelium.query_topology()
+        recent = _organism.mycelium.recent_messages
+
+        self._send_json(200, {
+            "colonies": colony_metrics,
+            "topology": _sanitize(topology),
+            "recent_messages": len(recent),
+            "organism": _sanitize(_organism.status()),
+        })
 
     def _handle_webhook(self):
         """Receive an external event and publish to a Mycelium channel."""
@@ -200,12 +253,20 @@ async def serve(host: str = "0.0.0.0", port: int = 7777, backend_name: str = "ol
     thread.start()
 
     print(f"🌐 HTTP bridge listening on http://{host}:{port}")
-    print(f"   POST /webhook  — publish to Mycelium")
-    print(f"   POST /task     — execute task")
-    print(f"   GET  /status   — organism health")
-    print(f"   GET  /channels — active channels")
-    print(f"   GET  /health   — liveness probe")
+    print(f"   GET  /          — dashboard (web UI)")
+    print(f"   POST /webhook   — publish to Mycelium")
+    print(f"   POST /task      — execute task")
+    print(f"   GET  /status    — organism health")
+    print(f"   GET  /channels  — active channels")
+    print(f"   GET  /metrics   — enriched metrics")
+    print(f"   GET  /alerts    — alert state")
+    print(f"   GET  /health    — liveness probe")
     print()
+
+    # Start alert monitoring loop
+    from symbiont.alerts import alert_loop
+    alert_task = asyncio.create_task(alert_loop(bridge_port=0))  # bridge_port=0 skips self-check
+    print("🔔 Alert monitoring active")
 
     # Keep alive until interrupted
     try:
@@ -214,6 +275,7 @@ async def serve(host: str = "0.0.0.0", port: int = 7777, backend_name: str = "ol
     except (KeyboardInterrupt, asyncio.CancelledError):
         pass
     finally:
+        alert_task.cancel()
         print("\n🧬 Shutting down...")
         server.shutdown()
         await organism.shutdown()

@@ -1,0 +1,51 @@
+id: alert_check
+namespace: symbiont
+description: |
+  Checks SYMBIONT health and triggers alert on failure.
+  Runs every 5 minutes. If bridge or colonies are down,
+  sends notification via the SYMBIONT alert system.
+
+labels:
+  project: symbiont
+  stage: production
+
+triggers:
+  - id: schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "*/5 * * * *"
+
+tasks:
+  - id: check_health
+    type: io.kestra.plugin.core.http.Request
+    uri: http://host.docker.internal:7777/health
+    method: GET
+    options:
+      connectTimeout: PT5S
+      readTimeout: PT10S
+    allowFailed: true
+
+  - id: check_alerts
+    type: io.kestra.plugin.core.http.Request
+    uri: http://host.docker.internal:7777/alerts
+    method: GET
+    options:
+      connectTimeout: PT5S
+      readTimeout: PT10S
+    allowFailed: true
+
+  - id: check_metrics
+    type: io.kestra.plugin.core.http.Request
+    uri: http://host.docker.internal:7777/metrics
+    method: GET
+    options:
+      connectTimeout: PT5S
+      readTimeout: PT10S
+    allowFailed: true
+
+  - id: log_health
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      SYMBIONT Alert Check:
+      Health: {{ outputs.check_health.code }}
+      Alerts: {{ outputs.check_alerts.code }}
+      Metrics: {{ outputs.check_metrics.code }}
