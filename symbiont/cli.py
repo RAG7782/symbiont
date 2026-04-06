@@ -272,6 +272,11 @@ def main():
             print(f"   Total: {s['total']}")
         except Exception as e:
             print(f"Error: {e}")
+    elif task_text.lower().startswith("audit"):
+        parts = task_text.split(maxsplit=1)
+        audit_args = parts[1] if len(parts) > 1 else ""
+        from symbiont.audit import audit_cmd
+        asyncio.run(audit_cmd(audit_args, verbose=args.verbose))
     elif task_text.lower() == "serve":
         # Start the HTTP bridge
         from symbiont.serve import serve as start_serve

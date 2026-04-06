@@ -76,6 +76,8 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             self._handle_alerts()
         elif self.path == "/metrics":
             self._handle_metrics()
+        elif self.path == "/audit":
+            self._handle_audit()
         else:
             self._send_json(404, {"error": "not found"})
 
@@ -144,6 +146,13 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             "recent_messages": len(recent),
             "organism": _sanitize(_organism.status()),
         })
+
+    def _handle_audit(self):
+        """Run audit scan and return report."""
+        from symbiont.audit import Auditor
+        auditor = Auditor()
+        report = auditor.scan(since_hours=168)  # Last 7 days for API
+        self._send_json(200, report.to_dict())
 
     def _handle_federation_heartbeat(self):
         body = self._read_body()

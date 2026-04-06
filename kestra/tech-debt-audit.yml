@@ -1,0 +1,32 @@
+id: tech_debt_audit
+namespace: symbiont
+description: |
+  Weekly technical debt audit — scans all repos for dirty files,
+  unpushed commits, missing .gitignore, exposed secrets.
+  Runs every Sunday at 09:00 BRT.
+
+labels:
+  project: symbiont
+  stage: production
+
+triggers:
+  - id: weekly
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 12 * * 0"
+
+tasks:
+  - id: run_audit
+    type: io.kestra.plugin.core.http.Request
+    uri: http://host.docker.internal:7777/audit
+    method: GET
+    options:
+      connectTimeout: PT10S
+      readTimeout: PT60S
+    allowFailed: true
+
+  - id: log_result
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      Tech Debt Audit:
+      Status: {{ outputs.run_audit.code }}
+      Response: {{ outputs.run_audit.body }}
