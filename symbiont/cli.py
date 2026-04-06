@@ -272,6 +272,11 @@ def main():
             print(f"   Total: {s['total']}")
         except Exception as e:
             print(f"Error: {e}")
+    elif task_text.lower().startswith("stress"):
+        parts = task_text.split(maxsplit=1)
+        stress_args = parts[1] if len(parts) > 1 else ""
+        from symbiont.stress import stress_cmd
+        asyncio.run(stress_cmd(stress_args, verbose=args.verbose))
     elif task_text.lower().startswith("audit"):
         parts = task_text.split(maxsplit=1)
         audit_args = parts[1] if len(parts) > 1 else ""

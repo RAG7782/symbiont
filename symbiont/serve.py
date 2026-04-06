@@ -78,6 +78,8 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             self._handle_metrics()
         elif self.path == "/audit":
             self._handle_audit()
+        elif self.path == "/stress":
+            self._handle_stress()
         else:
             self._send_json(404, {"error": "not found"})
 
@@ -146,6 +148,19 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             "recent_messages": len(recent),
             "organism": _sanitize(_organism.status()),
         })
+
+    def _handle_stress(self):
+        """Run quick stress test and return report."""
+        if not _event_loop:
+            self._send_json(503, {"error": "event loop not available"})
+            return
+        from symbiont.stress import run_stress
+        future = asyncio.run_coroutine_threadsafe(run_stress(mode="quick"), _event_loop)
+        try:
+            report = future.result(timeout=60)
+            self._send_json(200, report.to_dict())
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
 
     def _handle_audit(self):
         """Run audit scan and return report."""

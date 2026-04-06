@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -38,9 +39,24 @@ class PersistenceStore:
     def __init__(self, db_path: Path | str | None = None):
         self._path = Path(db_path) if db_path else DEFAULT_DB_PATH
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
+        self._conn = sqlite3.connect(str(self._path), check_same_thread=False, timeout=10)
         self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA busy_timeout=5000")
+        self._write_lock = threading.Lock()
         self._init_schema()
+
+    def _write(self, sql: str, params: tuple = ()) -> None:
+        """Thread-safe write (execute + commit)."""
+        with self._write_lock:
+            self._conn.execute(sql, params)
+            self._conn.commit()
+
+    def _write_many(self, operations: list[tuple[str, tuple]]) -> None:
+        """Thread-safe batch write."""
+        with self._write_lock:
+            for sql, params in operations:
+                self._conn.execute(sql, params)
+            self._conn.commit()
         logger.info("persistence: opened %s", self._path)
 
     def _init_schema(self):
@@ -99,14 +115,14 @@ class PersistenceStore:
 
     def save_channel_stats(self, stats: dict) -> None:
         """Save channel statistics from Mycelium."""
-        for channel, cs in stats.items():
-            self._conn.execute(
-                """INSERT OR REPLACE INTO channel_stats
-                   (channel, message_count, total_bytes, last_active, weight)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (channel, cs.message_count, cs.total_bytes, cs.last_active, cs.weight),
-            )
-        self._conn.commit()
+        ops = [
+            ("""INSERT OR REPLACE INTO channel_stats
+                (channel, message_count, total_bytes, last_active, weight)
+                VALUES (?, ?, ?, ?, ?)""",
+             (ch, cs.message_count, cs.total_bytes, cs.last_active, cs.weight))
+            for ch, cs in stats.items()
+        ]
+        self._write_many(ops)
 
     def load_channel_stats(self) -> dict:
         """Load channel statistics."""
@@ -124,12 +140,9 @@ class PersistenceStore:
     # ------------------------------------------------------------------
 
     def save_hub_scores(self, scores: dict[str, float]) -> None:
-        for node_id, score in scores.items():
-            self._conn.execute(
-                "INSERT OR REPLACE INTO hub_scores (node_id, score) VALUES (?, ?)",
-                (node_id, score),
-            )
-        self._conn.commit()
+        ops = [("INSERT OR REPLACE INTO hub_scores (node_id, score) VALUES (?, ?)",
+                (nid, s)) for nid, s in scores.items()]
+        self._write_many(ops)
 
     def load_hub_scores(self) -> dict[str, float]:
         rows = self._conn.execute("SELECT node_id, score FROM hub_scores").fetchall()
@@ -141,7 +154,7 @@ class PersistenceStore:
 
     def save_message(self, msg) -> None:
         """Save a single message to the log."""
-        self._conn.execute(
+        self._write(
             """INSERT OR IGNORE INTO messages
                (id, channel, sender_id, payload, priority, timestamp, metadata)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
@@ -150,7 +163,6 @@ class PersistenceStore:
              msg.priority, msg.timestamp,
              json.dumps(msg.metadata, default=str, ensure_ascii=False)),
         )
-        self._conn.commit()
         self._trim_messages()
 
     def load_recent_messages(self, limit: int = 100) -> list[dict]:
@@ -167,12 +179,11 @@ class PersistenceStore:
     def _trim_messages(self):
         count = self._conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
         if count > MAX_MESSAGE_LOG:
-            self._conn.execute(
+            self._write(
                 """DELETE FROM messages WHERE id IN
                    (SELECT id FROM messages ORDER BY timestamp ASC LIMIT ?)""",
                 (count - MAX_MESSAGE_LOG,),
             )
-            self._conn.commit()
 
     # ------------------------------------------------------------------
     # Squads
@@ -180,14 +191,13 @@ class PersistenceStore:
 
     def save_squad(self, name: str, description: str, agent_ids: list[str], context: dict) -> None:
         now = time.time()
-        self._conn.execute(
+        self._write(
             """INSERT OR REPLACE INTO squads
                (name, description, agent_ids, context, created_at, updated_at)
                VALUES (?, ?, ?, ?, COALESCE((SELECT created_at FROM squads WHERE name=?), ?), ?)""",
             (name, description, json.dumps(agent_ids), json.dumps(context, ensure_ascii=False),
              name, now, now),
         )
-        self._conn.commit()
 
     def load_squads(self) -> dict[str, dict]:
         rows = self._conn.execute("SELECT * FROM squads").fetchall()
@@ -201,22 +211,22 @@ class PersistenceStore:
         }
 
     def delete_squad(self, name: str) -> bool:
-        self._conn.execute("DELETE FROM squads WHERE name=?", (name,))
-        self._conn.commit()
-        return self._conn.total_changes > 0
+        with self._write_lock:
+            self._conn.execute("DELETE FROM squads WHERE name=?", (name,))
+            self._conn.commit()
+            return self._conn.total_changes > 0
 
     # ------------------------------------------------------------------
     # Federation
     # ------------------------------------------------------------------
 
     def save_peer(self, organism_id: str, name: str, url: str, metadata: dict | None = None) -> None:
-        self._conn.execute(
+        self._write(
             """INSERT OR REPLACE INTO federation
                (organism_id, name, url, last_heartbeat, metadata)
                VALUES (?, ?, ?, ?, ?)""",
             (organism_id, name, url, time.time(), json.dumps(metadata or {})),
         )
-        self._conn.commit()
 
     def load_peers(self) -> dict[str, dict]:
         rows = self._conn.execute("SELECT * FROM federation").fetchall()
@@ -228,20 +238,20 @@ class PersistenceStore:
 
     def remove_stale_peers(self, max_age_sec: float = 300) -> int:
         cutoff = time.time() - max_age_sec
-        self._conn.execute("DELETE FROM federation WHERE last_heartbeat < ?", (cutoff,))
-        self._conn.commit()
-        return self._conn.total_changes
+        with self._write_lock:
+            self._conn.execute("DELETE FROM federation WHERE last_heartbeat < ?", (cutoff,))
+            self._conn.commit()
+            return self._conn.total_changes
 
     # ------------------------------------------------------------------
     # Key-Value (generic)
     # ------------------------------------------------------------------
 
     def set(self, key: str, value: Any) -> None:
-        self._conn.execute(
+        self._write(
             "INSERT OR REPLACE INTO kv (key, value, updated_at) VALUES (?, ?, ?)",
             (key, json.dumps(value, default=str, ensure_ascii=False), time.time()),
         )
-        self._conn.commit()
 
     def get(self, key: str, default: Any = None) -> Any:
         row = self._conn.execute("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
