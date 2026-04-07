@@ -15,8 +15,12 @@ import asyncio
 import logging
 from typing import Any
 
+from symbiont.antibodies import AntibodyRegistry
 from symbiont.config import SymbiontConfig
+from symbiont.core.circuit_breaker import CircuitBreakerRegistry
 from symbiont.handoffs import HANDOFF_MATRIX, can_handoff, can_escalate, summary as handoff_summary
+from symbiont.scratch import SharedScratchpad
+from symbiont.synthesis import synthesize, estimate_complexity
 from symbiont.core.mycelium import Mycelium
 from symbiont.core.topology import TopologyEngine
 from symbiont.core.castes import CasteRegistry
@@ -86,6 +90,15 @@ class Symbiont:
         self.murmuration = MurmurationBus(self.config.murmuration)
         self.governor = Governor(self.config.governance)
         self.pods = PodDynamics()
+
+        # --- Circuit Breaker Registry ---
+        self.breakers = CircuitBreakerRegistry()
+
+        # --- Antibody Registry (R5 — error memory) ---
+        self.antibodies = AntibodyRegistry()
+
+        # --- Shared Scratchpad (R4 — extended mind) ---
+        self.scratch = SharedScratchpad()
 
         # --- Agent registry ---
         self._agents: dict[str, BaseAgent] = {}
@@ -354,8 +367,17 @@ class Symbiont:
             exec_context = {**context, "session": session.id, "approach": chosen_approach}
             if images:
                 exec_context["images"] = images
+
+            # R3: Synthesize context before delegation (never delegate understanding)
+            synthesis_result = await synthesize(
+                task=chosen_approach,
+                target_caste=Caste.MEDIA,
+                context=exec_context,
+                llm_backend=self._llm_backend,
+            )
+
             execution_result = await worker.execute(
-                chosen_approach,
+                synthesis_result.prompt,
                 exec_context,
             )
 
@@ -518,6 +540,10 @@ class Symbiont:
                     "latency_ms": self.mound.health.latency_ms,
                     "error_rate": self.mound.health.error_rate,
                 },
+            },
+            "circuit_breakers": {
+                "open": self.breakers.open_breakers,
+                "all": self.breakers.summary(),
             },
         }
 

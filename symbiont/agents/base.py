@@ -17,6 +17,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any, TYPE_CHECKING
 
+from symbiont.core.circuit_breaker import CircuitBreaker
 from symbiont.types import (
     AgentState,
     Artifact,
@@ -75,6 +76,10 @@ class BaseAgent(ABC):
 
         # LLM backend (pluggable)
         self._llm_backend: Any = None
+
+        # Circuit breakers for subsystem resilience
+        self._breaker_think = CircuitBreaker(name=f"{self.id}.think")
+        self._breaker_publish = CircuitBreaker(name=f"{self.id}.publish")
 
     # ------------------------------------------------------------------
     # Wiring (called by the organism during boot)
@@ -211,14 +216,23 @@ class BaseAgent(ABC):
     # ------------------------------------------------------------------
 
     async def publish(self, channel: str, payload: Any, priority: int = 5) -> None:
-        """Publish a message through the Mycelium."""
+        """Publish a message through the Mycelium. Protected by circuit breaker."""
+        if not self._breaker_publish.allow():
+            logger.warning("agent: '%s' publish circuit OPEN — message dropped on '%s'", self.id, channel)
+            return
+
         if self._mycelium:
-            await self._mycelium.publish(
-                channel=channel,
-                payload=payload,
-                sender_id=self.id,
-                priority=priority,
-            )
+            try:
+                await self._mycelium.publish(
+                    channel=channel,
+                    payload=payload,
+                    sender_id=self.id,
+                    priority=priority,
+                )
+                self._breaker_publish.record_success()
+            except Exception:
+                self._breaker_publish.record_failure()
+                raise
 
     async def _handle_message(self, msg: Message) -> None:
         """Internal handler — queues messages for processing in main loop."""
@@ -308,14 +322,33 @@ class BaseAgent(ABC):
         Use the LLM backend to reason about a prompt.
         Optionally pass images for multimodal analysis.
         Falls back to a simple echo if no backend is configured.
+        Protected by circuit breaker — degrades gracefully after 3 failures.
         """
+        if not self._breaker_think.allow():
+            logger.warning("agent: '%s' think circuit OPEN — using fallback", self.id)
+            return f"[{self.caste.name}:{self.id}] circuit open — degraded mode for: {prompt[:100]}"
+
         if self._llm_backend:
-            return await self._llm_backend.complete(
-                prompt=prompt,
-                context=context or {},
-                model_tier=self._get_model_tier(),
-                images=images,
-            )
+            try:
+                result = await self._llm_backend.complete(
+                    prompt=prompt,
+                    context=context or {},
+                    model_tier=self._get_model_tier(),
+                    images=images,
+                )
+                self._breaker_think.record_success()
+                return result
+            except Exception as e:
+                self._breaker_think.record_failure()
+                if self._governor and self._breaker_think.is_open:
+                    self._governor.record_error(self.id)
+                    await self.emit_signal(SignalType.ALERT, {
+                        "type": "circuit_open",
+                        "subsystem": "think",
+                        "agent": self.id,
+                        "failures": self._breaker_think.consecutive_failures,
+                    })
+                raise
         # Fallback: no LLM backend — return the prompt as a marker
         return f"[{self.caste.name}:{self.id}] would think about: {prompt[:100]}"
 

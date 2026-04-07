@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,10 @@ class IMIMemory:
         self._space = None
         self._db_path = db_path or str(Path.home() / ".imi" / "symbiont.db")
         self._available = False
+        # Cursor tracking for incremental encoding (R2)
+        self._cursor: str | None = None  # Last processed memory ID
+        self._pending_buffer: list[dict] = []  # Buffer of unencoded experiences
+        self._session_start: float = time.time()
         self._init()
 
     def _init(self):
@@ -73,11 +78,70 @@ class IMIMemory:
                 "tags": node.tags,
                 "mass": round(node.mass, 3),
             }
-            logger.debug("imi-memory: encoded '%s' (id=%s)", experience[:50], node.id)
+            self._cursor = node.id  # Update cursor to latest encoded memory
+            logger.debug("imi-memory: encoded '%s' (id=%s, cursor=%s)", experience[:50], node.id, self._cursor)
             return result
         except Exception as e:
             logger.warning("imi-memory: encode failed — %s", e)
             return None
+
+    # ------------------------------------------------------------------
+    # Incremental encoding (R2 — cursor-based delta processing)
+    # ------------------------------------------------------------------
+
+    def buffer(self, experience: str, tags: list[str] | None = None, source: str = "symbiont") -> None:
+        """Buffer an experience for later batch encoding. Does not encode immediately."""
+        self._pending_buffer.append({
+            "experience": experience,
+            "tags": tags,
+            "source": source,
+            "buffered_at": time.time(),
+        })
+        logger.debug("imi-memory: buffered experience (pending=%d)", len(self._pending_buffer))
+
+    def flush(self) -> list[dict]:
+        """Encode all buffered experiences. Returns list of encoded results."""
+        if not self._pending_buffer:
+            return []
+
+        results = []
+        encoded = []
+        for item in self._pending_buffer:
+            result = self.encode(
+                experience=item["experience"],
+                tags=item.get("tags"),
+                source=item.get("source", "symbiont"),
+            )
+            if result:
+                results.append(result)
+                encoded.append(item)
+
+        # Remove only successfully encoded items
+        for item in encoded:
+            self._pending_buffer.remove(item)
+
+        logger.info(
+            "imi-memory: flushed %d/%d buffered experiences (cursor=%s)",
+            len(results), len(results) + len(self._pending_buffer), self._cursor,
+        )
+        return results
+
+    @property
+    def cursor(self) -> str | None:
+        """The ID of the last encoded memory — used for incremental processing."""
+        return self._cursor
+
+    @property
+    def pending_count(self) -> int:
+        """Number of experiences waiting to be encoded."""
+        return len(self._pending_buffer)
+
+    def reset_cursor(self) -> None:
+        """Reset cursor to None — next encode_incremental will process everything."""
+        old = self._cursor
+        self._cursor = None
+        self._session_start = time.time()
+        logger.info("imi-memory: cursor reset (was=%s)", old)
 
     def recall(self, query: str, top_k: int = 5, zoom: str = "medium") -> list[dict]:
         """Search memories. Returns list of hits or empty list."""
@@ -112,12 +176,14 @@ class IMIMemory:
     def stats(self) -> dict:
         """Get memory statistics."""
         if not self._available:
-            return {"available": False}
+            return {"available": False, "cursor": self._cursor, "pending": self.pending_count}
         try:
             return {
                 "available": True,
                 "memories": len(self._space.episodic),
                 "db": self._db_path,
+                "cursor": self._cursor,
+                "pending": self.pending_count,
             }
         except Exception:
             return {"available": False}

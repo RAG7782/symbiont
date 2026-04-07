@@ -6,17 +6,20 @@ Defines who routes to whom, who collaborates, and who escalates.
 
 Tiers:
   Tier 0 (Routing):    Scout — explores, triages, routes
-  Tier 1 (Execution):  Worker — core work, code, analysis
+  Tier 1 (Execution):  Media — core work, code, analysis
   Tier 2 (Strategic):  Major — architecture, tiebreak, validation
   Meta:                Queen — lifecycle, spawning (not in decision chain)
   Support:             Minima — context prep, formatting (no LLM decisions)
 
 Rules:
   - Scouts NEVER execute work — they explore and recommend
-  - Workers NEVER make architectural decisions — they escalate to Major
+  - Media NEVER make architectural decisions — they escalate to Major
   - Majors NEVER do routine work — they decide and validate
   - Queen NEVER participates in task execution — only lifecycle
   - Minima NEVER use expensive models — haiku only
+
+R3: Synthesis is integrated — complex handoffs require context synthesis
+before delegation. See symbiont.synthesis for details.
 """
 
 from __future__ import annotations
