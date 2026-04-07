@@ -32,6 +32,9 @@ local = ["ollama>=0.4.0"]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.24"]
 all = ["anthropic>=0.42.0", "ollama>=0.4.0"]
 
+[tool.setuptools.packages.find]
+include = ["symbiont*"]
+
 [build-system]
 requires = ["setuptools>=65.0"]
 build-backend = "setuptools.build_meta"
