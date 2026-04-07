@@ -15,11 +15,17 @@ import asyncio
 import logging
 from typing import Any
 
+from symbiont.agent_tolerance import AgentToleranceManager
 from symbiont.antibodies import AntibodyRegistry
+from symbiont.background_memory import BackgroundMemory
 from symbiont.config import SymbiontConfig
 from symbiont.core.circuit_breaker import CircuitBreakerRegistry
+from symbiont.deferred_tools import DeferredToolLoader
 from symbiont.handoffs import HANDOFF_MATRIX, can_handoff, can_escalate, summary as handoff_summary
+from symbiont.memory import IMIMemory
+from symbiont.memory_scoring import MemoryScorer
 from symbiont.scratch import SharedScratchpad
+from symbiont.success_memory import SuccessMemory
 from symbiont.synthesis import synthesize, estimate_complexity
 from symbiont.core.mycelium import Mycelium
 from symbiont.core.topology import TopologyEngine
@@ -91,7 +97,7 @@ class Symbiont:
         self.governor = Governor(self.config.governance)
         self.pods = PodDynamics()
 
-        # --- Circuit Breaker Registry ---
+        # --- Circuit Breaker Registry (R10) ---
         self.breakers = CircuitBreakerRegistry()
 
         # --- Antibody Registry (R5 — error memory) ---
@@ -99,6 +105,22 @@ class Symbiont:
 
         # --- Shared Scratchpad (R4 — extended mind) ---
         self.scratch = SharedScratchpad()
+
+        # --- Agent Tolerance (R12 — trust zones) ---
+        self.tolerance = AgentToleranceManager()
+
+        # --- Memory Scoring (R11 — utility lifecycle) ---
+        self.memory_scorer = MemoryScorer()
+
+        # --- Success Memory (R13 — positive patterns) ---
+        self.successes = SuccessMemory()
+
+        # --- Deferred Tool Loader (R9 — caste-specific tools) ---
+        self.deferred_tools = DeferredToolLoader()
+
+        # --- IMI Memory + Background (R1/R2) ---
+        self._memory = IMIMemory()
+        self._bg_memory = BackgroundMemory(self._memory)
 
         # --- Agent registry ---
         self._agents: dict[str, BaseAgent] = {}
@@ -181,21 +203,32 @@ class Symbiont:
         await self.murmuration.start()
         await self.mound.start_homeostasis()
 
-        # 8. Auto-assign murmuration neighbors for all agents
+        # 8. Start background memory (R1 — fork pattern)
+        await self._bg_memory.start()
+
+        # 9. Auto-assign murmuration neighbors for all agents
         self._reassign_neighbors()
 
         self._running = True
         self._boot_complete = True
+
+        systems_count = 8 + 7  # 8 bio + 7 CC modules (breakers, antibodies, scratch, tolerance, scorer, successes, deferred)
         logger.info(
             "=== SYMBIONT: booted — %d agents, %d systems online ===",
             len(self._agents),
-            8,
+            systems_count,
         )
 
     async def shutdown(self) -> None:
         """Gracefully shut down the organism."""
         logger.info("=== SYMBIONT: shutting down ===")
         self._running = False
+
+        # Stop background memory (R1 — final flush)
+        await self._bg_memory.stop()
+
+        # R11: Tick session for memory scoring (age all memories)
+        self.memory_scorer.tick_session()
 
         # Stop background systems
         await self.topology.stop()
@@ -230,6 +263,12 @@ class Symbiont:
 
         # Register capabilities with PodDynamics
         self.pods.register_capabilities(agent.id, agent.capabilities)
+
+        # R12: Register with tolerance manager (starts on PROBATION)
+        self.tolerance.register(agent.id, caste)
+
+        # R11: Register for memory scoring
+        self.memory_scorer.register(agent.id)
 
         # Start the agent
         await agent.start()
@@ -303,6 +342,15 @@ class Symbiont:
         task_id = _uid()
 
         logger.info("symbiont: executing task '%s' (id=%s)", task[:80], task_id)
+
+        # R5: Check antibodies before starting (zero-cost if known pattern)
+        antibody = self.antibodies.check(task)
+        if antibody:
+            logger.info("symbiont: antibody match for task — using cached resolution")
+            self._bg_memory.remember(
+                f"Task resolved via antibody: {task[:80]} → {antibody.response[:80]}",
+                tags=["antibody", "cached"],
+            )
 
         # --- Phase 1: EXPLORATION (Scouts lead) ---
         await self.governor.transition_to(Phase.EXPLORATION)
@@ -420,6 +468,23 @@ class Symbiont:
         }
 
         logger.info("symbiont: task '%s' complete", task_id)
+
+        # R12/R13: Record outcome for tolerance + success memory
+        if execution_result:
+            worker_id = workers[0].id if workers else ""
+            if execution_result.get("artifact_id"):
+                self.tolerance.record_success(worker_id)
+                self.successes.record(
+                    approach=chosen_approach[:200],
+                    outcome=f"artifact:{execution_result['artifact_id']}",
+                    tags=["task_complete"],
+                    source_agent=worker_id,
+                )
+            # R1: Background memory encode
+            self._bg_memory.remember(
+                f"Task completed: {task[:100]} → approach: {chosen_approach[:100]}",
+                tags=["task", "execution"],
+            )
 
         # Cycle back to exploration for next task
         await self.governor.transition_to(Phase.EXPLORATION)
@@ -545,6 +610,15 @@ class Symbiont:
                 "open": self.breakers.open_breakers,
                 "all": self.breakers.summary(),
             },
+            "tolerance": self.tolerance.summary(),
+            "antibodies": self.antibodies.summary(),
+            "memory": {
+                "imi": self._memory.stats(),
+                "background": self._bg_memory.stats(),
+                "scoring": self.memory_scorer.summary(),
+            },
+            "successes": self.successes.summary(),
+            "scratch": self.scratch.summary(),
         }
 
     def _count_by_state(self) -> dict[str, int]:

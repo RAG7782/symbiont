@@ -1,6 +1,6 @@
 [project]
 name = "symbiont"
-version = "0.3.0"
+version = "0.3.1"
 description = "Symbiotic Multi-pattern Bio-intelligent Organism for Networked Tasks"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
