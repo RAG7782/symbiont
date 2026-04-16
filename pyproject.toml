@@ -18,6 +18,7 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=2.4.4",
+    "requests>=2.33.1",
 ]
 
 [project.scripts]

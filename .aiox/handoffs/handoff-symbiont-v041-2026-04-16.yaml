@@ -1,0 +1,74 @@
+handoff: symbiont-v041-2026-04-16
+date: 2026-04-16
+version: 0.4.1
+session: sessão DeerFlow extração + débitos técnicos
+status: COMPLETO — 0 débitos, 353/353 testes
+
+## O que foi feito
+
+### Origem
+- Analisados 2 repositórios: bytedance/deer-flow e JCodesMore/ai-website-cloner-template
+- Mapeados 3 padrões extraíveis do DeerFlow relevantes para o ecossistema
+
+### Módulos implementados
+sandbox.py:
+  - LocalSandbox com path confinement (resolve + relative_to)
+  - execute_stream() async generator tempo real
+  - DockerSandbox: --rm --memory=512m --cpus=1 --network=none
+  - block_system_reads=True: /etc/passwd, /proc/, /sys/ bloqueados
+  - SandboxProvider singleton acquire/release por thread
+
+mcp_registry.py:
+  - MCPRegistry com discovery paralela (asyncio.gather)
+  - OAuth2 auto-refresh (1h skew, double-checked locking)
+  - Background watcher (60s polling mtime)
+  - MCP_SERVERS_JSON env var 12-factor
+  - Transports: stdio / sse / http
+
+research_squad.py:
+  - Planner→Researcher→Coder pipeline
+  - _build_waves(): topological sort → asyncio.gather por wave
+  - Retry backoff 1s→2s→4s (configurable)
+  - Checkpointing SQLite via PersistenceStore
+  - Loop detection SHA-256 fingerprint
+
+### Wiring no organism.py
+  - SandboxProvider inicializado no __init__
+  - MCPRegistry inicializado no __init__
+  - PersistenceStore (_store) inicializado no __init__
+  - MCP watcher: start em boot(), stop em shutdown()
+  - Sandbox shutdown em shutdown()
+  - research() método público exposto
+  - _worker_index round-robin em execute()
+  - status() expandido: sandbox, mcp, numpy_available, imi_degraded
+
+### Débitos técnicos resolvidos (7/7)
+  1. persistence.py: logger.info estava dentro de _write_many → movido para __init__
+  2. persistence.py: kv_get/kv_set aliases adicionados (compatibilidade ResearchSquad)
+  3. sandbox.py: system path blocking (/etc, /proc, /sys)
+  4. organism.py: round-robin workers via _worker_index
+  5. organism.py: research() wired com PersistenceStore
+  6. numpy instalado + imi_degraded em status()
+  7. CI: .github/workflows/ci.yml (Python 3.11/3.12 matrix + version gate)
+
+### Testes
+  - 353/353 passando
+  - 59 testes novos: test_sandbox.py, test_mcp_registry.py, test_research_squad.py
+  - Nota: 8,6/10
+
+## Estado do projeto
+path: ~/symbiont/
+commit: 863f9d8
+branch: main
+
+## Próximos passos naturais
+  - Testes E2E com LLM mock real (AnthropicBackend + OllamaBackend wired)
+  - Benchmark de performance documentado
+  - Cobertura de código medida (pytest-cov)
+  - DockerSandbox testada em ambiente real com Docker daemon
+  - organism.research() + PersistenceStore: testar resume de pipeline real
+  - Integrar ResearchSquad ao Kestra (novo flow research_pipeline.yml)
+
+## Dependências instaladas (novas)
+  - numpy>=2.4.4 (agora em pyproject.toml dependencies)
+  - pytest-asyncio>=1.3.0 (dev)

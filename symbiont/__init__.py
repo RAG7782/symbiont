@@ -12,6 +12,7 @@ from symbiont.tools import ToolRegistry
 from symbiont.sandbox import SandboxProvider, SandboxConfig, get_sandbox_provider
 from symbiont.mcp_registry import MCPRegistry, MCPServerConfig, get_mcp_registry
 from symbiont.research_squad import ResearchSquad, PipelineResult
+from symbiont.oxe_bridge import OXEBridge, PremiumResult, create_premium_router
 
 __version__ = "0.4.1"
 __all__ = [
@@ -22,4 +23,6 @@ __all__ = [
     "SandboxProvider", "SandboxConfig", "get_sandbox_provider",
     "MCPRegistry", "MCPServerConfig", "get_mcp_registry",
     "ResearchSquad", "PipelineResult",
+    # OXÉ integration
+    "OXEBridge", "PremiumResult", "create_premium_router",
 ]
