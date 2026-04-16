@@ -166,17 +166,21 @@ class OXEBridge:
         conversation_id: str = "premium",
         tier: str = "high",
     ) -> str:
-        """Envia mensagem ao OXÉ com skill específica."""
+        """Envia mensagem ao OXÉ com skill específica.
+
+        O OXÉ /chat espera o token no campo `token` do body JSON,
+        não no header Authorization.
+        """
         payload: dict[str, Any] = {
             "message": message,
             "conversation_id": conversation_id,
+            "token": self._get_token(),  # OXÉ lê token do body
         }
         if skill:
             payload["skill"] = skill
         try:
             r = self._session.post(
                 f"{self.oxe_url}/chat",
-                headers=self._headers(),
                 json=payload,
                 timeout=120,
             )
@@ -187,11 +191,15 @@ class OXEBridge:
             return ""
 
     def escritorio_docx(self, conversation_id: str) -> bytes | None:
-        """Baixa o .docx gerado pelo Escritório Virtual."""
+        """Baixa o .docx gerado pelo Escritório Virtual.
+
+        O OXÉ /escritorio aceita token via query param ou header.
+        """
         try:
+            token = self._get_token()
             r = self._session.get(
                 f"{self.oxe_url}/escritorio/{conversation_id}/docx",
-                headers=self._headers(),
+                params={"authorization": token},
                 timeout=60,
             )
             r.raise_for_status()
