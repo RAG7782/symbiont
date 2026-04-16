@@ -372,6 +372,20 @@ class OXEBridge:
 
 
 # ─── Router FastAPI (opcional) ────────────────────────────────────────────────
+# PremiumRequest definido em nível de módulo para evitar forward-reference
+# issues com Pydantic v2 quando o router é incluído em apps externos.
+
+try:
+    from pydantic import BaseModel as _BaseModel
+
+    class PremiumRequest(_BaseModel):
+        query:            str
+        conversation_id:  str = ""
+        estilo_advogado:  str = ""
+
+except ImportError:
+    PremiumRequest = None  # type: ignore[assignment,misc]
+
 
 def create_premium_router(bridge: OXEBridge | None = None):
     """
@@ -383,21 +397,19 @@ def create_premium_router(bridge: OXEBridge | None = None):
     """
     try:
         from fastapi import APIRouter, HTTPException
-        from pydantic import BaseModel
     except ImportError:
         logger.warning("oxe_bridge: fastapi não instalado — router não disponível")
+        return None
+
+    if PremiumRequest is None:
+        logger.warning("oxe_bridge: pydantic não instalado — router não disponível")
         return None
 
     router  = APIRouter(prefix="/premium", tags=["premium"])
     _bridge = bridge or OXEBridge()
 
-    class PremiumRequest(BaseModel):
-        query:            str
-        conversation_id:  str = ""
-        estilo_advogado:  str = ""
-
     @router.post("")
-    async def premium_endpoint(req: PremiumRequest):
+    async def premium_endpoint(req: PremiumRequest):  # type: ignore[valid-type]
         """Pipeline premium multiagente (3 waves). Retorna peça completa + path .docx."""
         if not req.query.strip():
             raise HTTPException(400, "query obrigatória")
