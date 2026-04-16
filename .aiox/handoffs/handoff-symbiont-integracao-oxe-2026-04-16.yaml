@@ -1,0 +1,75 @@
+handoff: symbiont-integracao-oxe-2026-04-16
+date: 2026-04-16T23:51
+version: 0.4.1
+session: integração OXÉ container + oxe_bridge completo
+status: COMPLETO — pipeline /premium funcionando end-to-end
+
+## Ecossistema atual
+
+mac:
+  path: ~/symbiont
+  version: 0.4.1
+  commit: 2bbaffe
+  testes: 353/353
+  modulos: sandbox, mcp_registry, research_squad, oxe_bridge
+
+alan_venv:
+  path: /opt/symbiont-venv
+  version: 0.4.1
+  uso: scripts standalone, CLI sym
+
+alan_container:
+  container: oxe-api
+  instalacao: requirements.txt via tarball GitHub
+  versao: 0.4.1
+  endpoint: POST http://alan:8500/premium
+  pipeline: Wave1(busca paralela) + Wave2(Z.ai GLM) + Wave3(formatacao)
+  wave1_resultado: juris=5, legis=5, doutr=3
+
+github:
+  repo: RAG7782/symbiont
+  branch: main
+  ultimo_commit: 2bbaffe (fix token body OXE chat)
+  vulnerabilidades: 0
+
+arquivado:
+  - ~/experimentos/_archive/symbiont-v2-density-archived-20260416
+
+## Fixes aplicados ao oxe_bridge.py
+
+1. credenciais via OXE_EMAIL/OXE_PASSWORD env vars (sem hardcode)
+2. asyncio.get_running_loop() em vez de get_event_loop() (Python 3.12)
+3. PremiumRequest no nível de módulo (Pydantic v2 forward-ref fix)
+4. chat(): token passado em req.token body JSON (contrato OXÉ API)
+5. escritorio_docx(): token via query param authorization=
+6. CVE-2025-71176 pytest 9.0.2→9.0.3
+
+## docker-compose.yml alterações (alan /opt/oxe)
+
+variáveis adicionadas:
+  - OXE_EMAIL=renatoapgomes@gmail.com
+  - OXE_PASSWORD=Ragomes7782#
+  - OXE_URL=http://host.docker.internal:8500
+
+requirements.txt adicionado:
+  - symbiont @ https://github.com/RAG7782/symbiont/archive/refs/heads/main.tar.gz
+
+chat.py bloco adicionado ao final (linha ~4613):
+  - importa OXEBridge, cria _premium_router, registra em app
+
+## PENDÊNCIA CRÍTICA
+
+/opt/oxe NÃO tem git. chat.py tem 921 linhas diferentes do bak-s11.
+Próxima sessão DEVE:
+1. ssh alan && cd /opt/oxe && git init
+2. Criar repo privado GitHub para código OXÉ
+3. git add . && git commit (com .gitignore para jwt_secret.key)
+4. Push + proteção branch main
+
+## Próximos passos SYMBIONT
+
+- Testes E2E com LLM backend real (AnthropicBackend)
+- Benchmark de performance documentado
+- pytest-cov para medir cobertura
+- Kestra flow: research_pipeline.yml usando ResearchSquad
+- organism.research() integrado com PersistenceStore (já wired, validar)
