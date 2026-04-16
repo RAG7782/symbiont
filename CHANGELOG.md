@@ -3,6 +3,68 @@
 All notable changes to SYMBIONT are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.1] — 2026-04-16
+
+### Security
+- **Sandbox path confinement** (`sandbox.py`): all `_resolve()` calls now
+  canonicalize via `.resolve()` and assert the result is `relative_to(host_base)`.
+  Path traversal attacks (e.g. `/mnt/workspace/../../etc/passwd`) raise
+  `PermissionError` instead of silently escaping the mount.
+- **CWD pinned to workspace**: `execute_stream()` sets `cwd=workspace` so
+  relative paths in shell commands are confined to the sandbox.
+
+### Added
+- **execute_stream()** (`sandbox.py`): async generator that yields output
+  lines in real time as the subprocess produces them. Enables Workers to
+  observe long-running commands (builds, tests, ingest) without blocking.
+  `execute()` is now implemented on top of `execute_stream()`.
+- **DockerSandbox** (`sandbox.py`): Sandbox ABC implementation backed by
+  Docker `--rm` containers with `--memory=512m --cpus=1 --network=none`.
+  `SandboxProvider(backend="docker")` selects it; no interface changes needed.
+- **ResearchSquad: parallel wave execution** (`research_squad.py`):
+  `_build_waves()` performs topological sort on `TodoItem.depends_on` to
+  produce execution waves; independent todos in the same wave run via
+  `asyncio.gather`, delivering up to N× speedup.
+- **ResearchSquad: exponential-backoff retry** (`research_squad.py`):
+  `_llm_call_with_retry()` retries up to `llm_max_retries` times (default 3)
+  with backoff 1s→2s→4s. Transient LLM failures no longer crash pipelines.
+- **ResearchSquad: SQLite checkpointing** (`research_squad.py`):
+  when `persistence=PersistenceStore()` is provided, completed todos are
+  written to the KV store under `rsquad:<run_id>:<task_id>`. Resuming with
+  the same `run_id` skips already-done todos and restores the plan.
+- **TodoItem.depends_on** (`research_squad.py`): explicit DAG edges parsed
+  from planner output (`[depends: TASK-N]` annotation).
+- **MCPRegistry: background config watcher** (`mcp_registry.py`):
+  `await registry.start_watcher()` spawns an asyncio task that polls
+  `mtime` every 60 s and reloads servers proactively. `stop_watcher()` for
+  clean shutdown.
+- **MCPRegistry: parallel server discovery** (`mcp_registry.py`):
+  `asyncio.gather` probes all enabled servers concurrently; per-server
+  errors are isolated and logged without blocking other discoveries.
+- **MCPRegistry: 12-factor env var** (`mcp_registry.py`):
+  `MCP_SERVERS_JSON` env var overrides the default config path at startup,
+  enabling container/12-factor deployments without code changes.
+
+## [0.4.0] — 2026-04-16
+
+### Added
+- **Sandbox** (`sandbox.py`): isolated code execution for agents (DeerFlow pattern)
+  - `LocalSandbox`: virtual `/mnt/*` path mapping, host-path masking in output
+  - Read-only mount enforcement, per-thread workspace isolation
+  - `SandboxProvider` singleton with `acquire/release` lifecycle
+  - Interface: `execute`, `read_file`, `write_file`, `list_dir`, `glob`, `grep`
+- **MCP Registry** (`mcp_registry.py`): dynamic MCP server discovery with OAuth
+  - Supports `stdio`, `sse`, `http` transports
+  - OAuth2 `client_credentials` + `refresh_token` with proactive refresh (1h skew)
+  - Config file staleness detection (mtime-based auto-reload)
+  - `MCPRegistry` singleton with `get_tools()`, `reload()`, `summary()`
+- **Research Squad** (`research_squad.py`): Planner→Researcher→Coder pipeline
+  - `ResearchSquad`: Major (plan) → Scout (research) → Worker (code) sequencing
+  - Loop detection via content fingerprinting (aborts after 3 identical outputs)
+  - Sandbox auto-execution of `\`\`\`bash` blocks in LLM output
+  - MCP tool awareness injected into researcher prompt
+  - `PipelineResult`: artifacts, todos, elapsed_sec, loop_detected
+
 ## [0.3.0] — 2026-04-06
 
 ### Added

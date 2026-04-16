@@ -332,8 +332,8 @@ class Auditor:
                                 description=f"{label} found in {fpath}",
                                 details=f"Pattern: {real[0][:20]}...",
                             ))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("audit: skipping file %s during secret scan: %s", fpath, exc)
 
         return status
 

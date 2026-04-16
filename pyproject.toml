@@ -1,6 +1,6 @@
 [project]
 name = "symbiont"
-version = "0.3.1"
+version = "0.4.1"
 description = "Symbiotic Multi-pattern Bio-intelligent Organism for Networked Tasks"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
@@ -16,7 +16,9 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = []
+dependencies = [
+    "numpy>=2.4.4",
+]
 
 [project.scripts]
 sym = "symbiont.cli:main"
@@ -38,3 +40,9 @@ include = ["symbiont*"]
 [build-system]
 requires = ["setuptools>=65.0"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]

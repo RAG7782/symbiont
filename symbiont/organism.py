@@ -41,6 +41,9 @@ from symbiont.agents.scout import ScoutAgent
 from symbiont.agents.worker import WorkerAgent
 from symbiont.agents.major import MajorAgent
 from symbiont.agents.minima import MinimaAgent
+from symbiont.sandbox import SandboxProvider, SandboxConfig
+from symbiont.mcp_registry import MCPRegistry
+from symbiont.research_squad import ResearchSquad
 from symbiont.types import (
     AgentState,
     AllianceRequest,
@@ -121,6 +124,8 @@ class Symbiont:
         # --- IMI Memory + Background (R1/R2) ---
         self._memory = IMIMemory()
         self._bg_memory = BackgroundMemory(self._memory)
+        import importlib
+        self._numpy_available = importlib.util.find_spec("numpy") is not None
 
         # --- Agent registry ---
         self._agents: dict[str, BaseAgent] = {}
@@ -130,16 +135,29 @@ class Symbiont:
         self._llm_backend: Any = None
         self._tools: Any = None
 
+        # --- Sandbox (isolated code execution) ---
+        self._sandbox: SandboxProvider = SandboxProvider(
+            config=SandboxConfig(), backend="local"
+        )
+
+        # --- MCP Registry (dynamic tool discovery) ---
+        self._mcp = MCPRegistry()
+
+        # --- Persistence Store (KV + state) ---
+        from symbiont.persistence import PersistenceStore
+        self._store: PersistenceStore = PersistenceStore()
+
         # --- State ---
         self._running = False
         self._boot_complete = False
+        self._worker_index: int = 0
 
         # --- Auto-detect tools ---
         try:
             from symbiont.tools import ToolRegistry
             self._tools = ToolRegistry()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("symbiont: ToolRegistry unavailable (%s) — agents will run without GUI tools", exc)
 
     # ==================================================================
     # LLM Backend
@@ -206,6 +224,9 @@ class Symbiont:
         # 8. Start background memory (R1 — fork pattern)
         await self._bg_memory.start()
 
+        # 9. Start MCP Registry watcher (proactive tool discovery)
+        await self._mcp.start_watcher()
+
         # 9. Auto-assign murmuration neighbors for all agents
         self._reassign_neighbors()
 
@@ -223,6 +244,12 @@ class Symbiont:
         """Gracefully shut down the organism."""
         logger.info("=== SYMBIONT: shutting down ===")
         self._running = False
+
+        # Stop MCP watcher
+        await self._mcp.stop_watcher()
+
+        # Release all sandboxes
+        self._sandbox.shutdown()
 
         # Stop background memory (R1 — final flush)
         await self._bg_memory.stop()
@@ -260,6 +287,10 @@ class Symbiont:
         # Wire tools to Workers
         if self._tools and hasattr(agent, 'set_tools'):
             agent.set_tools(self._tools)
+
+        # Wire sandbox to Workers and Scouts (code execution capability)
+        if hasattr(agent, 'set_sandbox'):
+            agent.set_sandbox(self._sandbox)
 
         # Register capabilities with PodDynamics
         self.pods.register_capabilities(agent.id, agent.capabilities)
@@ -411,7 +442,8 @@ class Symbiont:
 
         execution_result = None
         if workers:
-            worker = workers[0]
+            self._worker_index = (self._worker_index + 1) % len(workers)
+            worker = workers[self._worker_index]
             exec_context = {**context, "session": session.id, "approach": chosen_approach}
             if images:
                 exec_context["images"] = images
@@ -438,7 +470,7 @@ class Symbiont:
                 a for a in self._agents.values()
                 if a.caste in (Caste.MAJOR, Caste.MEDIA)
                 and a.state == AgentState.ACTIVE
-                and a.id != (workers[0].id if workers else "")
+                and a.id != (workers[self._worker_index].id if workers else "")
             ]
             if reviewers:
                 reviewer = reviewers[0]
@@ -471,7 +503,7 @@ class Symbiont:
 
         # R12/R13: Record outcome for tolerance + success memory
         if execution_result:
-            worker_id = workers[0].id if workers else ""
+            worker_id = workers[self._worker_index % len(workers)].id if workers else ""
             if execution_result.get("artifact_id"):
                 self.tolerance.record_success(worker_id)
                 self.successes.record(
@@ -515,6 +547,30 @@ class Symbiont:
     # ==================================================================
     # Pod Formation (Dolphin dynamics)
     # ==================================================================
+
+    async def research(
+        self,
+        task: str,
+        context: dict | None = None,
+        run_id: str | None = None,
+        use_sandbox: bool = True,
+    ):
+        """
+        Execute a Planner→Researcher→Coder research pipeline.
+
+        Uses the organism's LLM backend, sandbox, and MCP registry.
+        Returns a PipelineResult with todos + artifacts.
+        """
+        if not self._running:
+            raise RuntimeError("SYMBIONT is not running. Call boot() first.")
+
+        squad = ResearchSquad(
+            llm_backend=self._llm_backend,
+            sandbox_provider=self._sandbox if use_sandbox else None,
+            mcp_registry=self._mcp,
+            persistence=self._store,
+        )
+        return await squad.run(task, context=context, run_id=run_id)
 
     async def form_pod(self, requester_id: str, objective: str, needed_capabilities: set[str]) -> Any:
         """Form a Pod for a collaborative task."""
@@ -616,9 +672,16 @@ class Symbiont:
                 "imi": self._memory.stats(),
                 "background": self._bg_memory.stats(),
                 "scoring": self.memory_scorer.summary(),
+                "numpy_available": self._numpy_available,
+                "imi_degraded": not self._numpy_available,
             },
             "successes": self.successes.summary(),
             "scratch": self.scratch.summary(),
+            "sandbox": {
+                "backend": self._sandbox._backend,
+                "active_sandboxes": len(self._sandbox._sandboxes),
+            },
+            "mcp": self._mcp.summary(),
         }
 
     def _count_by_state(self) -> dict[str, int]:

@@ -44,6 +44,7 @@ class PersistenceStore:
         self._conn.execute("PRAGMA busy_timeout=5000")
         self._write_lock = threading.Lock()
         self._init_schema()
+        logger.info("persistence: opened %s", self._path)
 
     def _write(self, sql: str, params: tuple = ()) -> None:
         """Thread-safe write (execute + commit)."""
@@ -57,7 +58,6 @@ class PersistenceStore:
             for sql, params in operations:
                 self._conn.execute(sql, params)
             self._conn.commit()
-        logger.info("persistence: opened %s", self._path)
 
     def _init_schema(self):
         self._conn.executescript("""
@@ -256,6 +256,12 @@ class PersistenceStore:
     def get(self, key: str, default: Any = None) -> Any:
         row = self._conn.execute("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else default
+
+    def kv_get(self, key: str, default: Any = None) -> Any:
+        return self.get(key, default)
+
+    def kv_set(self, key: str, value: Any) -> None:
+        self.set(key, value)
 
     # ------------------------------------------------------------------
     # Lifecycle

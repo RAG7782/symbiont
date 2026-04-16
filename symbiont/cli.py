@@ -139,10 +139,41 @@ async def show_status(backend_name: str):
     await organism.shutdown()
 
 
+IRIS_HELP = """
+╔══════════════════════════════════════════════════════════╗
+║                  ÍRIS — Comandos                         ║
+╚══════════════════════════════════════════════════════════╝
+
+  CHAT (TEXTO)
+    iris              Conversa com a Íris no Alan (VPS) — engine completa
+    iris-local        Conversa com a Íris no Mac — Anthropic API
+    iris-ollama       Conversa com a Íris no Mac — Ollama local (offline)
+
+  VOZ
+    iris-voz          Conversa por voz: mic → Whisper → neuroclaw → VoxCPM → speaker
+    iris-tts "texto"  Gera áudio com a voz da Íris via VoxCPM 2 (M4 Max/MPS)
+      --play          Toca imediatamente após gerar
+      --output FILE   Salva em arquivo .wav específico
+
+  AJUDA
+    iris-help         Exibe este painel completo de comandos da Íris
+    sym iris          Atalho: mesmo que iris-help
+
+  SERVIÇOS NO ALAN (100.73.123.8)
+    :4001  neuroclaw-wa  → Íris no WhatsApp
+    :4002  iris-voice    → TTS/STT (Edge-TTS pt-BR Thalita)
+    :3000  WAHA          → Gateway WhatsApp
+    :4000  LiteLLM       → Proxy de modelos
+    :5678  n8n           → Automações
+"""
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="sym",
         description="SYMBIONT — organismo multi-agente bio-inspirado",
+        epilog=IRIS_HELP,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "task",
@@ -196,6 +227,12 @@ def main():
         sys.exit(0)
 
     task_text = " ".join(args.task)
+
+    if task_text.lower() == "iris":
+        import os, subprocess
+        iris_help = os.path.expanduser("~/experimentos/research/neuroclaw/iris-help.sh")
+        subprocess.run(["bash", iris_help])
+        sys.exit(0)
 
     try:
         context = json.loads(args.context)

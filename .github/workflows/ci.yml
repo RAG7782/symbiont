@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
     branches: [main]
 
@@ -21,18 +21,21 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
-          restore-keys: ${{ runner.os }}-pip-
+      - name: Install uv
+        run: pip install uv
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv sync --all-extras
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: uv run pytest tests/ -q --asyncio-mode=auto --tb=short
 
-      - name: Check imports
-        run: python -c "from symbiont import Symbiont; print('Import OK')"
+      - name: Check version consistency
+        run: |
+          PYPROJECT_VER=$(python -c "import tomllib; d=tomllib.loads(open('pyproject.toml').read()); print(d['project']['version'])")
+          INIT_VER=$(python -c "import symbiont; print(symbiont.__version__)")
+          if [ "$PYPROJECT_VER" != "$INIT_VER" ]; then
+            echo "Version mismatch: pyproject=$PYPROJECT_VER init=$INIT_VER"
+            exit 1
+          fi
+          echo "Version OK: $PYPROJECT_VER"
