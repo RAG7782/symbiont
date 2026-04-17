@@ -33,7 +33,7 @@ jobs:
       - name: Check version consistency
         run: |
           PYPROJECT_VER=$(python -c "import tomllib; d=tomllib.loads(open('pyproject.toml').read()); print(d['project']['version'])")
-          INIT_VER=$(python -c "import symbiont; print(symbiont.__version__)")
+          INIT_VER=$(uv run python -c "import symbiont; print(symbiont.__version__)")
           if [ "$PYPROJECT_VER" != "$INIT_VER" ]; then
             echo "Version mismatch: pyproject=$PYPROJECT_VER init=$INIT_VER"
             exit 1
