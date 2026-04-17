@@ -125,6 +125,8 @@ class ModalBackend:
         import tempfile
 
         # Create a temporary Modal script
+        system_prompt_escaped = system_prompt.replace('"', '\\"')
+        user_prompt_escaped = user_prompt.replace('"', '\\"')
         script = f'''
 import modal
 
@@ -141,8 +143,8 @@ def inference():
     params = SamplingParams(temperature=0.7, max_tokens=2048)
 
     messages = [
-        {{"role": "system", "content": """{system_prompt.replace('"', '\\"')}"""}},
-        {{"role": "user", "content": """{user_prompt.replace('"', '\\"')}"""}},
+        {{"role": "system", "content": """{system_prompt_escaped}"""}},
+        {{"role": "user", "content": """{user_prompt_escaped}"""}},
     ]
 
     # Format as chat template
@@ -216,6 +218,7 @@ def main():
         import json
 
         texts_json = json.dumps(texts, ensure_ascii=False)
+        texts_json_escaped = texts_json.replace('"', '\\"')
 
         script = f'''
 import modal
@@ -231,7 +234,7 @@ vol = modal.Volume.from_name("symbiont-results", create_if_missing=True)
 def embed():
     from sentence_transformers import SentenceTransformer
     model = SentenceTransformer("{model}")
-    texts = json.loads("""{texts_json.replace('"', '\\"')}""")
+    texts = json.loads("""{texts_json_escaped}""")
     embeddings = model.encode(texts, show_progress_bar=True)
     result = {{"count": len(texts), "dim": embeddings.shape[1], "done": True}}
     # Save to volume
