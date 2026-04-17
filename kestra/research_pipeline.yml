@@ -1,0 +1,178 @@
+id: research_pipeline
+namespace: symbiont
+description: |
+  ResearchSquad pipeline — Planner → Researcher → Coder.
+  Triggers a full research task via SYMBIONT's organism.research() endpoint.
+  Supports checkpointing via run_id for resume on failure.
+
+labels:
+  project: symbiont
+  stage: production
+  pattern: research-squad
+
+inputs:
+  - id: task
+    type: STRING
+    description: Research task description
+    required: true
+
+  - id: run_id
+    type: STRING
+    description: Unique run ID for checkpointing (auto-generated if empty)
+    required: false
+    defaults: ""
+
+  - id: use_sandbox
+    type: BOOLEAN
+    description: Whether to use SYMBIONT sandbox for code execution
+    required: false
+    defaults: true
+
+  - id: context
+    type: STRING
+    description: JSON context passed to the pipeline
+    required: false
+    defaults: "{}"
+
+  - id: notify_on_complete
+    type: BOOLEAN
+    description: Post result summary to Mycelium on completion
+    required: false
+    defaults: true
+
+tasks:
+  - id: validate_input
+    type: io.kestra.plugin.scripts.python.Script
+    description: Validate task is not empty
+    script: |
+      task = "{{ inputs.task }}"
+      if not task.strip():
+          raise ValueError("task input cannot be empty")
+      print(f"[OK] Task validated: {task[:80]}")
+
+  - id: generate_run_id
+    type: io.kestra.plugin.scripts.python.Script
+    description: Generate run_id if not provided
+    outputFiles:
+      - run_id.txt
+    script: |
+      import uuid, time
+      run_id = "{{ inputs.run_id }}"
+      if not run_id.strip():
+          run_id = f"research-{int(time.time())}-{uuid.uuid4().hex[:8]}"
+      with open("run_id.txt", "w") as f:
+          f.write(run_id)
+      print(f"[OK] run_id: {run_id}")
+
+  - id: execute_research
+    type: io.kestra.plugin.scripts.python.Script
+    description: Execute ResearchSquad pipeline via SYMBIONT
+    outputFiles:
+      - result.json
+    env:
+      ANTHROPIC_API_KEY: "{{ secret('ANTHROPIC_API_KEY') }}"
+      SYMBIONT_HOST: "{{ envs.SYMBIONT_HOST | default('http://localhost:8080') }}"
+    script: |
+      import asyncio
+      import json
+      import os
+      import sys
+
+      # Try local import first (dev), fall back to installed package
+      try:
+          sys.path.insert(0, "/opt/symbiont-venv/lib/python3.12/site-packages")
+          from symbiont import Symbiont
+          from symbiont.backends import AnthropicBackend
+      except ImportError:
+          import subprocess
+          subprocess.run([sys.executable, "-m", "pip", "install", "symbiont"], check=True)
+          from symbiont import Symbiont
+          from symbiont.backends import AnthropicBackend
+
+      run_id_file = "{{ outputs.generate_run_id.outputFiles['run_id.txt'] }}"
+      with open(run_id_file) as f:
+          run_id = f.read().strip()
+
+      context = json.loads('{{ inputs.context }}')
+      use_sandbox = {{ inputs.use_sandbox }}
+
+      async def run():
+          backend = AnthropicBackend(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+          sym = Symbiont(backend=backend, num_agents=3)
+          await sym.boot()
+          try:
+              result = await sym.research(
+                  "{{ inputs.task }}",
+                  context=context,
+                  run_id=run_id,
+                  use_sandbox=use_sandbox,
+              )
+              return {
+                  "run_id": run_id,
+                  "success": result.success,
+                  "summary": result.summary,
+                  "elapsed_sec": result.elapsed_sec,
+                  "loop_detected": result.loop_detected,
+                  "todos_total": len(result.todos),
+                  "todos_done": sum(1 for t in result.todos if t.done),
+                  "artifacts_total": len(result.artifacts),
+                  "code_artifacts": len(result.code_artifacts()),
+              }
+          finally:
+              await sym.shutdown()
+
+      output = asyncio.run(run())
+      print(f"[OK] Pipeline complete: {output['summary']}")
+      print(f"     Todos: {output['todos_done']}/{output['todos_total']} done")
+      print(f"     Elapsed: {output['elapsed_sec']:.2f}s")
+
+      with open("result.json", "w") as f:
+          json.dump(output, f, indent=2)
+
+  - id: publish_result
+    type: io.kestra.plugin.scripts.python.Script
+    description: Publish result summary to Mycelium channel
+    condition: "{{ inputs.notify_on_complete }}"
+    env:
+      SYMBIONT_HOST: "{{ envs.SYMBIONT_HOST | default('http://localhost:8080') }}"
+    script: |
+      import json
+      import urllib.request
+
+      result_file = "{{ outputs.execute_research.outputFiles['result.json'] }}"
+      with open(result_file) as f:
+          result = json.load(f)
+
+      status = "SUCCESS" if result["success"] else "FAILED"
+      message = {
+          "channel": "kestra.research.complete",
+          "run_id": result["run_id"],
+          "status": status,
+          "summary": result["summary"],
+          "elapsed_sec": result["elapsed_sec"],
+          "todos_done": result["todos_done"],
+          "todos_total": result["todos_total"],
+      }
+
+      host = "{{ envs.SYMBIONT_HOST | default('http://localhost:8080') }}"
+      req = urllib.request.Request(
+          f"{host}/publish",
+          data=json.dumps(message).encode(),
+          headers={"Content-Type": "application/json"},
+          method="POST",
+      )
+      try:
+          with urllib.request.urlopen(req, timeout=5) as resp:
+              print(f"[OK] Published to Mycelium: {resp.status}")
+      except Exception as e:
+          print(f"[WARN] Mycelium publish failed (non-critical): {e}")
+
+errors:
+  - id: on_failure
+    type: io.kestra.plugin.scripts.python.Script
+    description: Log failure details for debugging
+    script: |
+      print("[ERROR] research_pipeline failed")
+      print("  Task: {{ inputs.task }}")
+      print("  run_id: {{ inputs.run_id }}")
+      print("  Check logs above for details.")

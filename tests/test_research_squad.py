@@ -32,12 +32,18 @@ async def _make_llm(responses: dict[str, str]):
 
 
 @pytest.fixture
-async def simple_llm():
-    return await _make_llm({
-        "Decompose": "[TASK-1] Step alpha\n[TASK-2] Step beta",
-        "researcher": "[SKIP]",
-        "engineer": "[SKIP]",
-    })
+def simple_llm():
+    async def llm(prompt: str) -> str:
+        responses = {
+            "Decompose": "[TASK-1] Step alpha\n[TASK-2] Step beta",
+            "researcher": "[SKIP]",
+            "engineer": "[SKIP]",
+        }
+        for key, resp in responses.items():
+            if key in prompt:
+                return resp
+        return "[SKIP]"
+    return llm
 
 
 # ---------------------------------------------------------------------------
