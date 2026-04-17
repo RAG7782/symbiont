@@ -1,0 +1,66 @@
+handoff: symbiont-oxe-2026-04-17
+date: 2026-04-17T23:00
+session: Resolução de todas as pendências críticas — OXÉ git + SYMBIONT v0.4.1
+status: COMPLETO — todas as pendências do handoff anterior resolvidas
+
+## OXÉ API — versionamento
+
+repo_github: RAG7782/oxe-api (privado)
+alan_path: /opt/oxe
+branch_protection: main (no force push, no delete)
+commits:
+  - e58c1c0: "chore: initial commit — OXÉ API v0.17+ snapshot 2026-04-17"
+  - c46ea6b: "feat: add TIER_GROQ_HIGH (Llama 3.3 70B) as free fallback before Claude Sonnet"
+
+nota: handoff anterior dizia que /opt/oxe não tinha git — estava ERRADO.
+      Repo já existia com commit inicial. chat.py tinha mudança pendente (TIER_GROQ_HIGH).
+
+## TIER_GROQ_HIGH (novo)
+
+cadeia de escalada atualizada:
+  LOW → FAST → MEDIUM → TURBO → HIGH → GROQ_HIGH → PREMIUM
+  GROQ_HIGH: Groq Llama 3.3 70B versatile (free tier, cost_per_1k_out: 0.0)
+  Objetivo: reduzir chamadas Claude Sonnet (PREMIUM) com fallback gratuito de alta qualidade
+
+## SYMBIONT v0.4.1 — pendências resolvidas
+
+commit: 0492d22 (RAG7782/symbiont main)
+
+fixes:
+  - test_research_squad.py: fixture async→sync (pytest 9 compat) → 353/353 passando
+
+adicionado:
+  - pytest-cov 7.1.0 — cobertura baseline 59%
+  - tests/test_e2e_anthropic.py — 6 testes E2E (skip sem ANTHROPIC_API_KEY)
+  - benchmarks/bench_research_squad.py — latência p50:54ms, speedup paralelo:2.88x PASS
+  - kestra/research_pipeline.yml — flow Planner→Researcher→Coder com checkpointing run_id
+
+validado:
+  - organism.research() já wired com PersistenceStore — sem mudanças necessárias
+
+## Estado atual dos repos
+
+RAG7782/symbiont:
+  versao: 0.4.1
+  testes: 353 passed, 6 skipped (E2E)
+  cobertura: 59%
+  ultimo_commit: 0492d22
+
+RAG7782/oxe-api:
+  path_alan: /opt/oxe
+  commits: 2
+  endpoint_principal: POST http://alan:8500/premium
+  ultimo_commit: c46ea6b
+
+## Próximos passos sugeridos
+
+SYMBIONT:
+  - Rodar E2E reais: ANTHROPIC_API_KEY=xxx uv run pytest tests/test_e2e_anthropic.py -v
+  - Aumentar cobertura: módulos baixos — federation(45%), gpu_router(22%), serve(19%)
+  - Kestra: subir flow research_pipeline.yml na instância Kestra
+  - Stress test: uv run python symbiont/stress.py (0% coverage — nunca testado)
+
+OXÉ:
+  - Configurar token alan com scope 'repo' para push direto (sem depender do Mac)
+  - Configurar GitHub Actions CI para oxe-api (lint + health check básico)
+  - Ingestão TIT Estaduais pendente: verificar estado coleção oxe_tit_estaduais no Qdrant
