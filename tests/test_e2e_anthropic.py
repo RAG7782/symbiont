@@ -95,7 +95,15 @@ class TestResearchSquadWithAnthropic:
         from symbiont import Symbiont
         from symbiont.backends import AnthropicBackend
 
-        sym = Symbiont(backend=AnthropicBackend(), num_agents=2)
+        class _BackendAdapter:
+            """Adapts AnthropicBackend.complete(prompt, context, tier) → complete(prompt)."""
+            def __init__(self, backend: AnthropicBackend) -> None:
+                self._b = backend
+            async def complete(self, prompt: str) -> str:
+                return await self._b.complete(prompt, context={}, model_tier="haiku")
+
+        sym = Symbiont()
+        sym.set_llm_backend(_BackendAdapter(AnthropicBackend()))
         await sym.boot()
         try:
             result = await sym.research(
