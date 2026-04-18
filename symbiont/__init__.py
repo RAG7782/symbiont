@@ -13,16 +13,31 @@ from symbiont.sandbox import SandboxProvider, SandboxConfig, get_sandbox_provide
 from symbiont.mcp_registry import MCPRegistry, MCPServerConfig, get_mcp_registry
 from symbiont.research_squad import ResearchSquad, PipelineResult
 from symbiont.oxe_bridge import OXEBridge, PremiumResult, create_premium_router
+from symbiont.federation import Federation, HEARTBEAT_INTERVAL, PEER_TIMEOUT
+from symbiont.persistence import PersistenceStore, DEFAULT_DB_PATH
 
 __version__ = "0.4.1"
 __all__ = [
-    "Symbiont", "EchoBackend", "OllamaBackend", "ModalBackend",
-    "IMIMemory", "Voice", "GPURouter", "FineTunePipeline",
+    # Core
+    "Symbiont",
+    # Backends
+    "EchoBackend", "OllamaBackend", "ModalBackend",
+    # Memory & Voice
+    "IMIMemory", "Voice",
+    # Infrastructure
+    "GPURouter", "FineTunePipeline",
+    # Handoffs
     "HANDOFF_MATRIX", "can_handoff", "can_escalate",
+    # Tools
+    "ToolRegistry",
     # DeerFlow-extracted patterns
     "SandboxProvider", "SandboxConfig", "get_sandbox_provider",
     "MCPRegistry", "MCPServerConfig", "get_mcp_registry",
     "ResearchSquad", "PipelineResult",
     # OXÉ integration
     "OXEBridge", "PremiumResult", "create_premium_router",
+    # Federation
+    "Federation", "HEARTBEAT_INTERVAL", "PEER_TIMEOUT",
+    # Persistence
+    "PersistenceStore", "DEFAULT_DB_PATH",
 ]
