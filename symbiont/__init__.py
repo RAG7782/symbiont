@@ -15,8 +15,10 @@ from symbiont.research_squad import ResearchSquad, PipelineResult
 from symbiont.oxe_bridge import OXEBridge, PremiumResult, create_premium_router
 from symbiont.federation import Federation, HEARTBEAT_INTERVAL, PEER_TIMEOUT
 from symbiont.persistence import PersistenceStore, DEFAULT_DB_PATH
+from symbiont.translation import TranslationLayer, TRANSLATION_WAVES
+from symbiont.legal_assembly import LegalAssembly, AssemblyResult, RateLimitTracker
 
-__version__ = "0.4.1"
+__version__ = "0.5.0"
 __all__ = [
     # Core
     "Symbiont",
@@ -40,4 +42,7 @@ __all__ = [
     "Federation", "HEARTBEAT_INTERVAL", "PEER_TIMEOUT",
     # Persistence
     "PersistenceStore", "DEFAULT_DB_PATH",
+    # Multi-model ensemble (v0.5.0)
+    "TranslationLayer", "TRANSLATION_WAVES",
+    "LegalAssembly", "AssemblyResult", "RateLimitTracker",
 ]
