@@ -10,6 +10,7 @@ venv/
 .env
 *.db
 .pytest_cache/
+.coverage
 .mypy_cache/
 .ruff_cache/
 *.log
