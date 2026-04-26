@@ -22,15 +22,28 @@ ollama --version
 # Baixar modelos (escolha conforme sua RAM):
 
 # === Kit Essencial (16 GB RAM) ===
-ollama pull qwen3:8b           # 5.2 GB — rapido, leve
-ollama pull deepseek-r1:8b     # 5.2 GB — raciocinio
-ollama pull qwen3-vl:8b        # 6.1 GB — visao/OCR
+ollama pull qwen3:8b             # 5.2 GB — rapido, leve
+ollama pull deepseek-r1:8b       # 5.2 GB — raciocinio
+ollama pull phi4-mini             # 2.5 GB — ultra-rapido
+ollama pull all-minilm:latest    # 45 MB  — embeddings
 
-# === Kit Completo (32+ GB RAM) ===
+# === Kit Intermediario (32 GB RAM) ===
+ollama pull qwen3.5:9b           # 6.6 GB — coding balanced
+ollama pull deepseek-coder:6.7b  # 3.8 GB — codigo especializado
+ollama pull nemotron-mini:4b     # 2.7 GB — raciocinio leve
+ollama pull llama3.1:8b          # 4.9 GB — instrucoes gerais
+ollama pull gemma4:latest        # 9.6 GB — general purpose (medio)
+
+# === Kit Completo (64+ GB RAM) ===
 ollama pull gemma4:26b           # 17 GB — all-rounder
 ollama pull qwen3.5:27b          # 17 GB — coding top-tier
 ollama pull nemotron-3-nano:30b  # 24 GB — math, contexto 1M
 ollama pull llama3.2-vision:11b  # 7.8 GB — visao
+ollama pull qwen3-vl:8b          # 6.1 GB — OCR
+
+# === Especializado ===
+ollama pull oxe-juris-base       # 4.9 GB — fine-tune juridico BR
+ollama pull nomic-embed-text     # 274 MB — embeddings 768d
 
 # Verificar modelos instalados
 ollama list
@@ -78,6 +91,10 @@ alias sym-cloud='sym --backend cloud'
 alias o-code='ollama run coding'
 alias o-chat='ollama run general'
 alias o-reason='ollama run reasoning'
+alias o-coder='ollama run deepseek-coder:6.7b'
+alias o-juris='ollama run oxe-juris-base'
+alias o-mini='ollama run phi4-mini'
+alias o-llama='ollama run llama3.1:8b'
 alias o-list='ollama list'
 alias o-running='ollama ps'
 ```

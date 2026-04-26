@@ -200,7 +200,7 @@ def main():
     parser.add_argument(
         "--light", "-l",
         action="store_true",
-        help="Modo light: usa só qwen3:8b para todos os agentes (economiza RAM)",
+        help="Modo light: usa só phi4-mini para todos os agentes (economiza RAM)",
     )
     parser.add_argument(
         "--image", "-i",

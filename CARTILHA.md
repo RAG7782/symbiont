@@ -35,12 +35,25 @@ Preciso de algo?
 | Modelo | Alias | Quando usar | RAM |
 |--------|-------|-------------|-----|
 | **qwen3:8b** | `o-fast` | Perguntas rapidas, rascunhos, brainstorm | 5 GB |
-| **qwen3.5:27b** | `o-code` | Programacao, code review, debug, refactor | 17 GB |
+| **qwen3.5:9b** | `o-code` | Programacao, code review, debug | 6.6 GB |
+| **qwen3.5:27b** | `o-code-pro` | Coding pesado, refator complexa | 17 GB |
 | **gemma4:26b** | `o-chat` | Conversas gerais, analise, redacao, criativo | 17 GB |
-| **nemotron-3-nano:30b** | `o-reason` | Matematica, raciocinio longo, analise juridica complexa | 24 GB |
+| **gemma4:latest** | `o-chat-lite` | Versao leve do Gemma 4 (9.6 GB) | 9.6 GB |
+| **nemotron-3-nano:30b** | `o-reason` | Matematica, raciocinio longo, juridico complexo | 24 GB |
+| **nemotron-mini:4b** | `o-reason-lite` | Raciocinio rapido, leve | 2.7 GB |
 | **deepseek-r1:8b** | `o-deep` | Chain-of-thought explicito, passo a passo | 5 GB |
+| **deepseek-coder:6.7b** | `o-coder` | Codigo especializado, completions | 3.8 GB |
+| **phi4-mini:latest** | `o-mini` | Ultra-rapido, Microsoft, tarefas simples | 2.5 GB |
+| **llama3.1:8b** | `o-llama` | Meta Llama 3.1, instrucoes gerais | 4.9 GB |
 | **llama3.2-vision:11b** | `o-vision` | Analisar imagens, screenshots, diagramas | 8 GB |
 | **qwen3-vl:8b** | -- | OCR, ler documentos digitalizados | 6 GB |
+| **oxe-juris-base:latest** | `o-juris` | **Fine-tune juridico BR** (OXE) | 4.9 GB |
+| **qwen3.5:4b** | -- | Qwen 3.5 ultra-leve | 3.4 GB |
+| **all-minilm:latest** | -- | Embeddings 384d (interno) | 45 MB |
+| **nomic-embed-text** | -- | Embeddings 768d (alta isotropia) | 274 MB |
+
+> **Atualizado 2026-04-25:** 7 novos modelos adicionados (marcados acima).
+> Destaque: `oxe-juris-base` (fine-tune juridico) e `deepseek-coder:6.7b` (codigo).
 
 **Regra de ouro:** Nunca rode 2 modelos grandes ao mesmo tempo (>17 GB cada).
 Use `o-list` para ver o que esta carregado e `o-running` para ver o que esta ativo.
@@ -297,6 +310,10 @@ sym federation status     # Peers da federacao
 o-code                    # Chat coding (Qwen 3.5)
 o-chat                    # Chat geral (Gemma 4)
 o-reason                  # Chat raciocinio (Nemotron)
+o-coder                   # Codigo especializado (DeepSeek Coder 6.7B)
+o-juris                   # Juridico BR (OXE Juris Base)
+o-mini                    # Ultra-rapido (Phi-4 Mini, 2.5 GB)
+o-llama                   # General purpose (Llama 3.1 8B)
 o-deep                    # Chain-of-thought (DeepSeek R1)
 o-vision                  # Imagens (Llama Vision)
 o-list                    # Modelos instalados

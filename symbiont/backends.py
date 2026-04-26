@@ -41,30 +41,39 @@ class OllamaBackend:
     """
     Local backend using Ollama — zero API cost, runs on-device.
 
-    Maps model tiers to local Ollama models:
-    - haiku  → qwen3:8b         (fast, lightweight)
-    - sonnet → qwen3.5:27b      (coding, SWE-bench 72.4%)
-    - opus   → gemma4:26b       (all-rounder, #3 open model)
+    Maps model tiers to local Ollama models (updated 2026-04-25):
+    - haiku  → qwen3:8b           (fast, lightweight)
+    - sonnet → qwen3.5:9b         (coding, balanced speed/quality)
+    - opus   → gemma4:26b         (all-rounder, #3 open model)
     - reason → nemotron-3-nano:30b (math 82.88%, 1M context)
+    - coding → deepseek-coder:6.7b (code-specialized)
+    - juris  → oxe-juris-base     (fine-tuned jurídico BR)
+    - light  → phi4-mini          (ultra-fast, 2.5 GB)
+
+    New models added 2026-04-25: gemma4:latest (9.6GB), nemotron-mini:4b,
+    phi4-mini, deepseek-coder:6.7b, qwen3.5:4b, qwen3.5:9b,
+    oxe-juris-base (fine-tune jurídico), llama3.1:8b.
 
     Also supports preset aliases: coding, general, reasoning.
     """
 
     MODEL_MAP = {
         "haiku": "qwen3:8b",
-        "sonnet": "qwen3.5:27b",
+        "sonnet": "qwen3.5:9b",
         "opus": "gemma4:26b",
         "reason": "nemotron-3-nano:30b",
         "vision": "llama3.2-vision:11b",
         "ocr": "qwen3-vl:8b",
+        "coding": "deepseek-coder:6.7b",
+        "juris": "oxe-juris-base:latest",
+        "light": "phi4-mini:latest",
         # Preset aliases
-        "coding": "coding",
         "general": "general",
         "reasoning": "reasoning",
     }
 
     # Light mode: all tiers use the same model (avoids RAM thrashing)
-    LIGHT_MODEL = "qwen3:8b"
+    LIGHT_MODEL = "phi4-mini:latest"
 
     def __init__(self, host: str = "http://localhost:11434", light: bool = False, memory: bool = True) -> None:
         self._light = light
@@ -89,6 +98,7 @@ class OllamaBackend:
             except Exception as e:
                 logger.debug("ollama-backend: IMI not available — %s", e)
 
+    # Vision-capable models (auto-switch when images are provided)
     # Vision-capable models (auto-switch when images are provided)
     VISION_MODELS = {"llama3.2-vision:11b", "qwen3-vl:8b"}
 

@@ -3,6 +3,13 @@
 All notable changes to SYMBIONT are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## 2026-04-25 — Ollama Model Expansion
+
+- Added 7 new models: gemma4:latest (8B), qwen3.5:9b, qwen3.5:4b, deepseek-coder:6.7b, nemotron-mini:4b, phi4-mini, llama3.1:8b
+- Added oxe-juris-base Modelfile (llama:8b with legal system prompt)
+- New tiers in OllamaBackend: coding, juris, light
+- LIGHT_MODEL changed to phi4-mini (2.5 GB vs 5.2 GB)
+
 ## [0.4.1] — 2026-04-16
 
 ### Security

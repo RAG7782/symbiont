@@ -40,3 +40,4 @@ secrets.json
 .idea/
 .vscode/
 *.swp
+.coverage

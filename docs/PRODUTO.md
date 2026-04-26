@@ -52,7 +52,7 @@ que exploram, decidem, executam e validam tarefas — como um organismo vivo.
 | | Cursor/Copilot | SYMBIONT |
 |---|---|---|
 | Foco | So codigo | Codigo + juridico + pesquisa + voz + visao |
-| Modelo | 1 fixo | 7 locais + 200+ cloud |
+| Modelo | 1 fixo | 14 locais + 200+ cloud |
 | Processo | Autocomplete | Ciclo completo (explorar → decidir → executar → validar) |
 | Custo | $10-40/mes | $0 |
 | Fine-tune | Impossivel | Pipeline integrado (Unsloth → Ollama) |
@@ -99,16 +99,23 @@ que exploram, decidem, executam e validam tarefas — como um organismo vivo.
 
 ## O Que Inclui
 
-### Modelos de IA (7 modelos, ~83 GB)
+### Modelos de IA (14 modelos locais)
 
 | Modelo | Parametros | Especialidade |
 |--------|-----------|---------------|
 | Gemma 4 26B | 26B MoE | All-rounder, agentic |
-| Qwen 3.5 27B | 27B | Coding (SWE-bench 72.4%) |
+| Gemma 4 Latest | 8B | All-rounder compacto |
+| Qwen 3.5 9B | 9B | Coding, balanced |
+| Qwen 3.5 4B | 4B | Coding ultra-leve |
 | Nemotron 3 Nano 30B | 30B MoE | Math (82.88%), contexto 1M |
+| Nemotron Mini 4B | 4B | Math leve |
 | Qwen 3 8B | 8B | Rapido, leve |
 | Qwen 3 VL 8B | 8B | OCR, documentos |
 | Llama 3.2 Vision 11B | 11B | Analise de imagens |
+| Llama 3.1 8B | 8B | General purpose |
+| DeepSeek Coder 6.7B | 6.7B | Codigo especializado |
+| Phi-4 Mini | 3.8B | Ultra-rapido, 2.5 GB |
+| OXE Juris Base | 8B | Juridico BR (fine-tune) |
 | DeepSeek R1 8B | 8B | Chain-of-thought |
 
 ### Organismo Multi-Agente (9 agentes, 3 tiers)

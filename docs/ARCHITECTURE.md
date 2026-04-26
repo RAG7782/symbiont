@@ -204,16 +204,26 @@ Each phase has a leading caste. The Governor manages transitions.
 | Backend | Module | Cost | Features |
 |---------|--------|------|----------|
 | EchoBackend | backends.py | $0 | Testing without LLM |
-| OllamaBackend | backends.py | $0 | 7 local models, model tier mapping |
+| OllamaBackend | backends.py | $0 | 14 local models, 9 tier mappings |
 | OpenRouterBackend | backends.py | $/token | 200+ cloud models |
 | AnthropicBackend | backends.py | $/token | Claude family |
 | ModalBackend | modal_backend.py | $/GPU-hr | GPU cloud (L4/A100) |
 
-**OllamaBackend model mapping**:
-- haiku → qwen3:8b (fast)
-- sonnet → qwen3.5:27b (coding)
-- opus → gemma4:26b (all-rounder)
-- reason → nemotron-3-nano:30b (math, 1M context)
+**OllamaBackend model mapping** (updated 2026-04-25):
+
+| Tier | Model | Size | Role |
+|------|-------|------|------|
+| haiku | qwen3:8b | 4.9 GB | Fast, lightweight |
+| sonnet | qwen3.5:9b | 5.6 GB | Coding, balanced |
+| opus | gemma4:26b | 16 GB | All-rounder |
+| reason | nemotron-3-nano:30b | 18 GB | Math, 1M context |
+| coding | deepseek-coder:6.7b | 3.8 GB | Code-specialized |
+| juris | oxe-juris-base | 4.9 GB | Legal BR (fine-tuned llama:8b) |
+| light | phi4-mini | 2.5 GB | Ultra-fast, minimal RAM |
+| vision | llama3.2-vision:11b | 7.9 GB | Image analysis |
+| ocr | qwen3-vl:8b | 5.5 GB | Document OCR |
+
+Additional models available locally: gemma4:latest (9.6 GB), qwen3.5:4b, nemotron-mini:4b, llama3.1:8b.
 
 ---
 
