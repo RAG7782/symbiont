@@ -60,6 +60,35 @@ class AntibodyRegistry:
         # Will be wired by organism if MCP is present
         self._immune_available = False
 
+    def connect_immune(self) -> bool:
+        """
+        Wire the Immune Bridge to this registry.
+
+        Probes ~/.aiox/integrations/immune_bridge.py health check.
+        Sets _immune_available=True on success. Fails gracefully.
+        Called by Organism.boot() after MCP watcher is started.
+        """
+        try:
+            import sys
+            import os
+            bridge_path = os.path.expanduser("~/.aiox/integrations")
+            if bridge_path not in sys.path:
+                sys.path.insert(0, bridge_path)
+            from immune_bridge import bridge_health  # type: ignore[import]
+            result = bridge_health(timeout_seconds=2.0)
+            if result.get("status") == "ok":
+                self._immune_available = True
+                logger.info(
+                    "antibody: immune bridge connected — latency %sms",
+                    result.get("latency_ms", "?"),
+                )
+                return True
+            logger.warning("antibody: immune bridge degraded — %s", result)
+            return False
+        except Exception as exc:
+            logger.warning("antibody: immune bridge unavailable — %s", exc)
+            return False
+
     def check(self, error_text: str) -> Antibody | None:
         """
         Check if an antibody exists for this error pattern.

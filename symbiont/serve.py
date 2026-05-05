@@ -92,6 +92,8 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             self._handle_federation_heartbeat()
         elif self.path == "/federation/register":
             self._handle_federation_register()
+        elif self.path == "/tolerance/promote":
+            self._handle_tolerance_promote()
         else:
             self._send_json(404, {"error": "not found"})
 
@@ -187,6 +189,42 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"ok": True})
         else:
             self._send_json(503, {"error": "federation not initialized"})
+
+    def _handle_tolerance_promote(self):
+        """
+        Administrative trust promotion: record N successes for all registered agents.
+
+        POST /tolerance/promote  {"successes": 3}
+
+        Useful after long idle periods where agents stagnate on PROBATION
+        without having executed tasks. Fails gracefully if organism is down.
+        """
+        if not _organism:
+            self._send_json(503, {"error": "organism not running"})
+            return
+
+        body = self._read_body()
+        n = max(1, min(int(body.get("successes", 3)), 20))  # clamp 1..20
+
+        promoted = []
+        stayed = []
+        for agent_id, profile in list(_organism.tolerance._profiles.items()):
+            before = profile.trust_level.value
+            for _ in range(n):
+                _organism.tolerance.record_success(agent_id)
+            after = profile.trust_level.value
+            if after != before:
+                promoted.append({"agent": agent_id, "from": before, "to": after})
+            else:
+                stayed.append({"agent": agent_id, "level": after})
+
+        self._send_json(200, {
+            "ok": True,
+            "successes_applied": n,
+            "promoted": promoted,
+            "unchanged": stayed,
+            "total_agents": len(_organism.tolerance._profiles),
+        })
 
     def _handle_webhook(self):
         """Receive an external event and publish to a Mycelium channel."""

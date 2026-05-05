@@ -230,6 +230,9 @@ class Symbiont:
         # 9. Auto-assign murmuration neighbors for all agents
         self._reassign_neighbors()
 
+        # 10. Wire Immune Bridge to AntibodyRegistry (graceful — never blocks boot)
+        self.antibodies.connect_immune()
+
         self._running = True
         self._boot_complete = True
 
